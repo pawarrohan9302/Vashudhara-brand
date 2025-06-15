@@ -17,6 +17,7 @@ const Collections = () => {
     const [surname, setSurname] = useState("");
     const [pinCode, setPinCode] = useState("");
     const [stateName, setStateName] = useState("");
+
     const [district, setDistrict] = useState("");
     const [village, setVillage] = useState("");
 
@@ -75,13 +76,23 @@ const Collections = () => {
 
         // Step 1: Create an Order on your Server (Backend)
         try {
-            const orderCreationResponse = await fetch('/api/create-razorpay-order', {
+            // ✅ IMPORTANT: Use the full backend URL here
+            const orderCreationResponse = await fetch('http://localhost:5000/api/create-razorpay-order', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ amount: amountInPaise }),
             });
+
+            // Check if the response was OK (status 2xx) before trying to parse JSON
+            if (!orderCreationResponse.ok) {
+                const errorText = await orderCreationResponse.text(); // Read as text in case of non-JSON error
+                console.error("Backend order creation failed (HTTP error):", orderCreationResponse.status, errorText);
+                alert(`Error from backend: ${errorText || 'Failed to create order.'}`);
+                setLoadingPayment(false);
+                return;
+            }
 
             const orderData = await orderCreationResponse.json();
 
@@ -93,7 +104,7 @@ const Collections = () => {
 
             // Step 2: Open Razorpay Checkout (Client-Side)
             const options = {
-                key: 'rzp_test_eVi31zd0UZULF8', // ✅ Replaced with your provided Key ID
+                key: 'rzp_test_eVi31zd0UZULF8', // ✅ Your provided Key ID
                 amount: orderData.amount, // Amount in paise, from server response
                 currency: orderData.currency,
                 name: 'Vashudhara Store',
@@ -103,7 +114,8 @@ const Collections = () => {
                     // This function is called after successful payment
                     // Step 3: Verify Payment on your Server (Backend)
                     try {
-                        const verificationRes = await fetch('/api/verify-razorpay-payment', {
+                        // ✅ IMPORTANT: Use the full backend URL here
+                        const verificationRes = await fetch('http://localhost:5000/api/verify-razorpay-payment', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -114,6 +126,14 @@ const Collections = () => {
                                 razorpay_signature: response.razorpay_signature,
                             }),
                         });
+
+                        if (!verificationRes.ok) {
+                            const errorText = await verificationRes.text();
+                            console.error("Backend verification failed (HTTP error):", verificationRes.status, errorText);
+                            alert(`Payment verification error from backend: ${errorText || 'Failed to verify payment.'}`);
+                            setLoadingPayment(false);
+                            return;
+                        }
 
                         const verificationData = await verificationRes.json();
 
@@ -289,6 +309,7 @@ const Collections = () => {
                             src={selectedProduct.image}
                             alt={selectedProduct.title}
                             className="w-full h-48 object-contain rounded-lg mb-6"
+                            loading="lazy"
                         />
 
                         {/* Quantity and Size */}
