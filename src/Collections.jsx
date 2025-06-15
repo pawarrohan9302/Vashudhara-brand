@@ -1,51 +1,52 @@
 // src/Collections.jsx
-import React, { useState, useEffect } from "react";
-import { database } from "./firebase"; // Assuming firebase.js is correctly configured
-import { ref, onValue, push } from "firebase/database";
+import React, { useEffect, useState } from "react";
+import { database } from "./firebase"; // Ensure 'database' is exported from firebase.js
+import { ref, onValue, push, update } from "firebase/database";
+import loadScript from "./loadRazorpayScript"; // Import the helper function
 
-const Collections = () => {
-    const [collections, setCollections] = useState({});
-    const [search, setSearch] = useState("");
-    const [category, setCategory] = useState("mens-wear"); // Default category
+const Collections = () => { // Changed from CategoryPage to Collections
+    const [products, setProducts] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [loadingPayment, setLoadingPayment] = useState(false); // State for loading indicator
-
-    // State variables for the purchase form
     const [quantity, setQuantity] = useState(1);
     const [size, setSize] = useState("M");
     const [fullName, setFullName] = useState("");
     const [surname, setSurname] = useState("");
     const [pinCode, setPinCode] = useState("");
     const [stateName, setStateName] = useState("");
-
     const [district, setDistrict] = useState("");
     const [village, setVillage] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // --- Data Fetching ---
+    // IMPORTANT: Replace with your actual Razorpay Test Key ID
+    // NEVER expose your Key Secret in client-side code for a production app!
+    const RAZORPAY_KEY_ID = "rzp_test_Wj5c933q6luams"; // <-- PASTE YOUR RAZORPAY TEST KEY ID HERE
+
     useEffect(() => {
-        const collectionsRef = ref(database, `collections/${category}`);
-        const unsubscribe = onValue(collectionsRef, (snapshot) => {
-            const data = snapshot.val() || {};
-            setCollections(data);
+        setIsLoading(true);
+        const productsRef = ref(database, "products");
+        // For Collections page, you might fetch all products or a specific subset
+        // If you want to filter by a default category, you'd add query here.
+        // For now, let's fetch all products to show the collection.
+        const unsubscribe = onValue(productsRef, (snapshot) => {
+            const data = snapshot.val();
+            const productArray = data ? Object.entries(data).map(([id, value]) => ({ id, ...value })) : [];
+            setProducts(productArray);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching products:", error);
+            setIsLoading(false);
         });
+
+        // Cleanup function for useEffect
         return () => unsubscribe();
-    }, [category]);
+    }, []); // Empty dependency array means this runs once on mount
 
-    const collectionItems = Object.entries(collections).map(([key, value]) => ({
-        id: key,
-        ...value,
-    }));
-
-    const filteredItems = collectionItems.filter((item) =>
-        item.title.toLowerCase().includes(search.toLowerCase())
-    );
-
-    // --- Event Handlers ---
-    const handleViewDetailsClick = (product) => {
+    const handleBuyClick = (product) => {
         setSelectedProduct(product);
         // Reset form fields when a new product is selected
         setQuantity(1);
-        setSize("M"); // Default size
+        setSize("M");
         setFullName("");
         setSurname("");
         setPinCode("");
@@ -54,237 +55,226 @@ const Collections = () => {
         setVillage("");
     };
 
-    // This function now handles payment via Razorpay
-    const handleRazorpayPayment = async () => {
-        if (loadingPayment) return; // Prevent double clicks
-
-        // Basic validation for address fields
+    const handleCreateOrder = async () => {
+        // --- Form Validation ---
         if (!fullName || !surname || !pinCode || !stateName || !district || !village) {
             alert("Please fill all required address fields.");
+            setIsSubmitting(false); // Ensure button is re-enabled if validation fails
+            return;
+        }
+
+        if (!/^\d{6}$/.test(pinCode)) {
+            alert("Please enter a valid 6-digit PIN code.");
+            setIsSubmitting(false); // Ensure button is re-enabled if validation fails
             return;
         }
 
         if (!selectedProduct) {
             alert("No product selected for purchase.");
+            setIsSubmitting(false); // Ensure button is re-enabled if validation fails
             return;
         }
 
-        setLoadingPayment(true);
+        setIsSubmitting(true); // Disable the button while processing
 
-        const totalAmount = (selectedProduct.price * quantity) || 100; // Calculate total amount
-        const amountInPaise = totalAmount * 100; // Razorpay expects amount in paise
+        const itemPrice = parseFloat(selectedProduct.price);
+        if (isNaN(itemPrice) || itemPrice <= 0) {
+            alert("Product price is invalid. Please select another product or contact support.");
+            setIsSubmitting(false);
+            return;
+        }
+        const amount = itemPrice * quantity; // Total amount in INR
+        const razorpayAmountInPaisa = Math.round(amount * 100); // Razorpay expects amount in paisa (integer)
 
-        // Step 1: Create an Order on your Server (Backend)
+        let firebaseOrderId = null; // Variable to store the Firebase order ID
+
         try {
-            // ✅ IMPORTANT: Use the full backend URL here
-            const orderCreationResponse = await fetch('http://localhost:5000/api/create-razorpay-order', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ amount: amountInPaise }),
+            // Step 1: Save the order to Firebase with 'Payment Pending' status
+            const ordersRef = ref(database, "orders");
+            const newOrderRef = await push(ordersRef, {
+                productId: selectedProduct.id,
+                productTitle: selectedProduct.title,
+                productImage: selectedProduct.image,
+                pricePerItem: selectedProduct.price,
+                quantity: quantity,
+                size: size,
+                customerName: fullName,
+                customerSurname: surname,
+                pinCode: pinCode,
+                state: stateName,
+                district: district,
+                village: village,
+                totalAmount: amount,
+                orderDate: new Date().toISOString(),
+                status: "Payment Pending", // Initial status
+                paymentMethod: "Razorpay",
             });
+            firebaseOrderId = newOrderRef.key; // Get the unique ID generated by Firebase
+            console.log("Order saved to Firebase with ID:", firebaseOrderId);
 
-            // Check if the response was OK (status 2xx) before trying to parse JSON
-            if (!orderCreationResponse.ok) {
-                const errorText = await orderCreationResponse.text(); // Read as text in case of non-JSON error
-                console.error("Backend order creation failed (HTTP error):", orderCreationResponse.status, errorText);
-                alert(`Error from backend: ${errorText || 'Failed to create order.'}`);
-                setLoadingPayment(false);
+            // Step 2: Load the Razorpay SDK script dynamically
+            const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
+
+            if (!res) {
+                alert("Razorpay SDK failed to load. Please check your internet connection.");
+                setIsSubmitting(false);
+                // Update Firebase order status if SDK fails to load
+                if (firebaseOrderId) {
+                    await update(ref(database, `orders/${firebaseOrderId}`), {
+                        status: "Payment Initiation Failed (SDK Load)",
+                    });
+                }
                 return;
             }
 
-            const orderData = await orderCreationResponse.json();
-
-            if (orderData.error) {
-                alert(`Error creating Razorpay order: ${orderData.error}`);
-                setLoadingPayment(false);
-                return;
-            }
-
-            // Step 2: Open Razorpay Checkout (Client-Side)
+            // Step 3: Configure Razorpay payment options
             const options = {
-                key: 'rzp_test_eVi31zd0UZULF8', // ✅ Your provided Key ID
-                amount: orderData.amount, // Amount in paise, from server response
-                currency: orderData.currency,
-                name: 'Vashudhara Store',
-                description: `Purchase of ${selectedProduct.title} (Qty: ${quantity})`,
-                order_id: orderData.orderId, // Order ID from your server
-                handler: async (response) => {
-                    // This function is called after successful payment
-                    // Step 3: Verify Payment on your Server (Backend)
-                    try {
-                        // ✅ IMPORTANT: Use the full backend URL here
-                        const verificationRes = await fetch('http://localhost:5000/api/verify-razorpay-payment', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_signature: response.razorpay_signature,
-                            }),
-                        });
-
-                        if (!verificationRes.ok) {
-                            const errorText = await verificationRes.text();
-                            console.error("Backend verification failed (HTTP error):", verificationRes.status, errorText);
-                            alert(`Payment verification error from backend: ${errorText || 'Failed to verify payment.'}`);
-                            setLoadingPayment(false);
-                            return;
-                        }
-
-                        const verificationData = await verificationRes.json();
-
-                        if (verificationData.success) {
-                            // Payment successfully verified on server!
-                            // Now, save the complete order details to Firebase
-                            const ordersRef = ref(database, "orders");
-                            await push(ordersRef, {
-                                productId: selectedProduct.id,
-                                productTitle: selectedProduct.title,
-                                productImage: selectedProduct.image,
-                                pricePerItem: selectedProduct.price,
-                                quantity: quantity,
-                                size: size,
-                                customerName: fullName,
-                                customerSurname: surname,
-                                pinCode: pinCode,
-                                state: stateName,
-                                district: district,
-                                village: village,
-                                totalAmount: totalAmount, // Use totalAmount in INR
-                                orderDate: new Date().toISOString(),
-                                status: "Payment Confirmed", // Update status
-                                paymentMethod: "Razorpay",
-                                razorpayPaymentId: response.razorpay_payment_id,
-                                razorpayOrderId: response.razorpay_order_id,
-                            });
-
-                            alert("Payment Successful! Your order has been placed.");
-                            setSelectedProduct(null); // Close modal
-                            // Optionally, redirect to an order confirmation page
-                            // navigate('/order-confirmation/' + orderData.orderId);
-                        } else {
-                            // Payment failed verification on server
-                            alert("Payment verification failed. Please contact support.");
-                            // You might still save a 'failed' or 'pending' order to Firebase here
-                        }
-                    } catch (error) {
-                        console.error("Error during payment verification or saving order:", error);
-                        alert("An error occurred during payment. Please try again or contact support.");
-                    } finally {
-                        setLoadingPayment(false);
-                    }
-                },
-                prefill: {
-                    name: `${fullName} ${surname}`,
-                    // email: 'user@example.com', // Add user's email if available
-                    // contact: '9999999999', // Add user's contact if available
-                },
-                notes: {
+                key: RAZORPAY_KEY_ID, // Your Razorpay Key ID
+                amount: razorpayAmountInPaisa, // Amount in paisa
+                currency: "INR",
+                name: "Vashudhara Store", // Your store name
+                description: `Order for ${selectedProduct.title}`,
+                image: "https://example.com/your_logo.png", // Replace with your store's logo URL
+                // The 'order_id' is not passed here directly as we are not pre-creating
+                // an order on the Razorpay server using a Cloud Function.
+                // Razorpay can handle direct payment capture.
+                notes: { // Custom notes to associate with the payment
+                    firebaseOrderId: firebaseOrderId, // Pass your Firebase order ID
+                    productTitle: selectedProduct.title,
+                    customerName: `${fullName} ${surname}`,
+                    pinCode: pinCode,
                     address: `${village}, ${district}, ${stateName} - ${pinCode}`,
-                    orderDescription: `Order for ${selectedProduct.title}`,
+                    product_id: selectedProduct.id,
                 },
-                theme: {
-                    color: '#34D399', // Tailwind's emerald-400
+                handler: async function (response) {
+                    // This function is called on successful payment
+                    console.log("Payment successful:", response);
+                    alert("Payment successful! Your order has been placed.");
+
+                    // Step 4: Update order status in Firebase to 'Payment Successful'
+                    if (firebaseOrderId) {
+                        try {
+                            await update(ref(database, `orders/${firebaseOrderId}`), {
+                                status: "Payment Successful",
+                                razorpayPaymentId: response.razorpay_payment_id,
+                                razorpayOrderId: response.razorpay_order_id, // This will be generated by Razorpay during payment
+                                razorpaySignature: response.razorpay_signature,
+                            });
+                            console.log("Order status updated in Firebase.");
+                        } catch (updateError) {
+                            console.error("Error updating order status in Firebase:", updateError);
+                            alert("Payment successful, but there was an error updating order status in our system. Please contact support with your payment ID: " + response.razorpay_payment_id);
+                        }
+                    }
+
+                    setSelectedProduct(null); // Close the modal
+                    setIsSubmitting(false); // Re-enable the button
                 },
+                prefill: { // Pre-fill customer details in the Razorpay checkout
+                    name: `${fullName} ${surname}`,
+                    email: "customer@example.com", // Use actual customer email if available
+                    contact: "9999999999", // Use actual customer contact if available
+                },
+                theme: { // Customize the theme of the Razorpay checkout
+                    color: "#3399cc",
+                },
+                modal: {
+                    ondismiss: async function () {
+                        // This function is called when the user dismisses the payment modal
+                        console.log('Payment dismissed by user.');
+                        alert("Payment was cancelled or failed. Please try again.");
+                        // Update Firebase order status to 'Payment Cancelled'
+                        if (firebaseOrderId) {
+                            try {
+                                await update(ref(database, `orders/${firebaseOrderId}`), {
+                                    status: "Payment Cancelled By User",
+                                });
+                                console.log("Order status updated to 'Payment Cancelled' in Firebase.");
+                            } catch (updateError) {
+                                console.error("Error updating order status on dismiss:", updateError);
+                            }
+                        }
+                        setIsSubmitting(false); // Re-enable the button
+                    }
+                }
             };
 
-            const rzp = new window.Razorpay(options);
-            rzp.on('razorpay_payment_and_checkout_closed', function (response) {
-                // Payment modal closed by user, not necessarily a failure
-                if (!response.error) {
-                    console.log("Razorpay checkout closed by user without error.");
-                } else {
-                    console.log("Razorpay checkout closed with error:", response.error.code, response.error.description);
-                }
-                setLoadingPayment(false); // Stop loading when modal closes
-            });
-            rzp.on('razorpay_payment_failed', function (response) {
-                alert(`Payment failed: ${response.error.description}. Please try again.`);
-                console.error("Razorpay payment failed:", response.error);
-                setLoadingPayment(false);
-                // Optionally save a 'failed' order status to Firebase
-            });
-            rzp.open();
+            // Step 4: Open the Razorpay payment gateway
+            const paymentObject = new window.Razorpay(options);
+            paymentObject.open();
 
         } catch (error) {
-            console.error("Error initiating Razorpay payment:", error);
-            alert("Could not initiate payment. Please try again.");
-            setLoadingPayment(false);
+            console.error("Error during payment initiation:", error);
+            alert(`An error occurred: ${error.message || "Please try again."}`);
+
+            // Update Firebase order status to 'Payment Initiation Failed' if an error occurs
+            if (firebaseOrderId) {
+                try {
+                    await update(ref(database, `orders/${firebaseOrderId}`), {
+                        status: "Payment Initiation Failed (Client-side Error)",
+                        errorMessage: error.message,
+                    });
+                } catch (updateErr) {
+                    console.error("Failed to update status after initiation error:", updateErr);
+                }
+            }
+            setIsSubmitting(false); // Re-enable the button
         }
     };
 
-    // --- Component Render ---
     return (
         <section className="bg-black min-h-screen py-16 px-5 font-poppins text-blue-100">
-            <div className="max-w-3xl mx-auto text-center">
-                <h1 className="text-4xl font-bold mb-3">Our Collections</h1>
-                <p className="text-lg text-slate-400 mb-10">
-                    Explore the latest collections of clothing, accessories, and more!
+            <div className="max-w-3xl mx-auto text-center mb-10">
+                <h1 className="text-4xl font-bold mb-3 text-emerald-300 capitalize">
+                    Our Collections
+                </h1>
+                <p className="text-lg text-slate-400">
+                    Explore all our amazing products.
                 </p>
-
-                {/* Category Select */}
-                <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="p-3.5 px-5 rounded-full border-2 border-emerald-400 bg-gray-900 text-blue-100 text-base mb-8 focus:outline-none focus:border-emerald-500"
-                >
-                    <option value="mens-wear">Men's Wear</option>
-                    <option value="womens-wear">Women's Wear</option>
-                    <option value="accessories">Accessories</option>
-                    <option value="earrings">Earring Elegance</option>
-                </select>
-
-                {/* Search Input */}
-                <input
-                    type="text"
-                    placeholder="Search collections..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="p-3.5 px-6 rounded-full border-2 border-emerald-400 w-3/4 max-w-sm text-base bg-gray-900 text-blue-100 outline-none mb-12 transition-colors duration-300 focus:border-emerald-500"
-                />
             </div>
 
-            {/* Products Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
-                {filteredItems.length === 0 ? (
+                {isLoading ? (
                     <p className="text-slate-400 col-span-full text-center">
-                        No collections found.
+                        Loading products...
+                    </p>
+                ) : products.length === 0 ? (
+                    <p className="text-slate-400 col-span-full text-center">
+                        No products found in our collection.
                     </p>
                 ) : (
-                    filteredItems.map((item) => (
+                    products.map((product) => (
                         <div
-                            key={item.id}
+                            key={product.id}
                             className="relative bg-gray-800 rounded-3xl overflow-hidden shadow-lg shadow-emerald-700/30 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-emerald-700/60"
-                            onClick={() => handleViewDetailsClick(item)}
+                            onClick={() => handleBuyClick(product)}
                         >
-                            {item.tag && (
+                            {product.tag && (
                                 <span className="absolute top-4 left-4 bg-green-500 text-white py-1.5 px-3 rounded-full text-xs font-bold uppercase tracking-wider z-10">
-                                    {item.tag}
+                                    {product.tag}
                                 </span>
                             )}
 
                             <img
-                                src={item.image}
-                                alt={item.title}
+                                src={product.image}
+                                alt={product.title}
                                 className="w-full h-52 object-cover"
                                 loading="lazy"
                             />
 
-                            {/* Hover Overlay */}
                             <div className="absolute bottom-0 w-full bg-emerald-600/85 text-emerald-50 text-center py-3 opacity-0 transition-opacity duration-300 font-semibold text-base rounded-b-3xl group-hover:opacity-100 hover-overlay">
                                 View Details
                             </div>
 
                             <div className="p-6">
-                                <h2 className="text-2xl mb-3 text-emerald-200 font-bold">
-                                    {item.title}
-                                </h2>
+                                <h3 className="text-2xl mb-3 text-emerald-200 font-bold">
+                                    {product.title}
+                                </h3>
                                 <p className="text-base text-gray-300 leading-normal">
-                                    {item.description || item.brand || ""}
+                                    Brand: {product.brand || "N/A"}
+                                </p>
+                                <p className="text-xl font-bold mt-2 text-emerald-50">
+                                    Price: ₹{product.price || "N/A"}
                                 </p>
                             </div>
                         </div>
@@ -292,15 +282,14 @@ const Collections = () => {
                 )}
             </div>
 
-            {/* --- Purchase Modal --- */}
             {selectedProduct && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-5"
-                    onClick={() => setSelectedProduct(null)}
+                    onClick={() => !isSubmitting && setSelectedProduct(null)} // Close modal if clicking outside, but not while submitting
                 >
                     <div
                         className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md text-white p-6 flex flex-col max-h-[90vh] overflow-y-auto"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()} // Prevent modal from closing when clicking inside
                     >
                         <h2 className="text-3xl font-bold mb-5 text-center text-emerald-300">
                             Buy {selectedProduct.title}
@@ -312,11 +301,11 @@ const Collections = () => {
                             loading="lazy"
                         />
 
-                        {/* Quantity and Size */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                             <div>
-                                <label className="block text-sm font-semibold mb-1 text-gray-300">Quantity:</label>
+                                <label htmlFor="quantity" className="block text-sm font-semibold mb-1 text-gray-300">Quantity:</label>
                                 <input
+                                    id="quantity"
                                     type="number"
                                     min="1"
                                     value={quantity}
@@ -325,8 +314,9 @@ const Collections = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold mb-1 text-gray-300">Size:</label>
+                                <label htmlFor="size" className="block text-sm font-semibold mb-1 text-gray-300">Size:</label>
                                 <select
+                                    id="size"
                                     value={size}
                                     onChange={(e) => setSize(e.target.value)}
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
@@ -339,11 +329,11 @@ const Collections = () => {
                             </div>
                         </div>
 
-                        {/* Address Fields */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                             <div>
-                                <label className="block text-sm font-semibold mb-1 text-gray-300">Full Name:</label>
+                                <label htmlFor="fullName" className="block text-sm font-semibold mb-1 text-gray-300">Full Name:</label>
                                 <input
+                                    id="fullName"
                                     type="text"
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
@@ -351,8 +341,9 @@ const Collections = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold mb-1 text-gray-300">Surname:</label>
+                                <label htmlFor="surname" className="block text-sm font-semibold mb-1 text-gray-300">Surname:</label>
                                 <input
+                                    id="surname"
                                     type="text"
                                     value={surname}
                                     onChange={(e) => setSurname(e.target.value)}
@@ -360,8 +351,9 @@ const Collections = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold mb-1 text-gray-300">Pin Code:</label>
+                                <label htmlFor="pinCode" className="block text-sm font-semibold mb-1 text-gray-300">Pin Code:</label>
                                 <input
+                                    id="pinCode"
                                     type="text"
                                     value={pinCode}
                                     onChange={(e) => setPinCode(e.target.value)}
@@ -370,8 +362,9 @@ const Collections = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold mb-1 text-gray-300">State:</label>
+                                <label htmlFor="stateName" className="block text-sm font-semibold mb-1 text-gray-300">State:</label>
                                 <input
+                                    id="stateName"
                                     type="text"
                                     value={stateName}
                                     onChange={(e) => setStateName(e.target.value)}
@@ -379,8 +372,9 @@ const Collections = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold mb-1 text-gray-300">District:</label>
+                                <label htmlFor="district" className="block text-sm font-semibold mb-1 text-gray-300">District:</label>
                                 <input
+                                    id="district"
                                     type="text"
                                     value={district}
                                     onChange={(e) => setDistrict(e.target.value)}
@@ -388,8 +382,9 @@ const Collections = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold mb-1 text-gray-300">Village:</label>
+                                <label htmlFor="village" className="block text-sm font-semibold mb-1 text-gray-300">Village:</label>
                                 <input
+                                    id="village"
                                     type="text"
                                     value={village}
                                     onChange={(e) => setVillage(e.target.value)}
@@ -403,16 +398,16 @@ const Collections = () => {
                         </p>
 
                         <button
-                            onClick={handleRazorpayPayment}
+                            onClick={handleCreateOrder}
                             className="bg-green-500 text-black py-3 rounded-full text-lg font-semibold mb-3 hover:bg-green-600 transition-colors duration-200"
-                            disabled={loadingPayment}
+                            disabled={isSubmitting} // Disable button during submission
                         >
-                            {loadingPayment ? 'Processing Payment...' : 'Pay with Razorpay'}
+                            {isSubmitting ? "Processing Payment..." : "Confirm Purchase & Pay"}
                         </button>
                         <button
                             onClick={() => setSelectedProduct(null)}
                             className="bg-red-500 text-white py-3 rounded-full text-lg font-semibold hover:bg-red-600 transition-colors duration-200"
-                            disabled={loadingPayment}
+                            disabled={isSubmitting} // Disable cancel button during submission
                         >
                             Cancel
                         </button>
