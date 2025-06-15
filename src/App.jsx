@@ -1,18 +1,33 @@
+// src/App.jsx
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
+// All components are assumed to be directly in the src/ folder
 import Header from "./Header";
 import Home from "./Home";
 import Cart from "./Cart";
 import About from "./About";
 import Contact from "./Contact";
-import Collections from "./Collections";
+import Collections from "./Collections"; // This now handles category-based product display and purchase
+import CategoryPage from "./CategoryPage"; // You might consider if this is still needed if Collections covers its functionality
 import Admin from "./Admin";
-import CategoryPage from "./CategoryPage";
 import Login from "./Login";
 import Register from "./Register";
 import ForgotPassword from "./ForgotPassword";
 import ProfileForm from "./ProfileForm";
-import Payment from "./Payment"; // ✅ Payment component
+import Payment from "./Payment";
+import Orders from "./Orders";
+import Profile from "./Profile";
+import Coupons from "./Coupons";
+import SavedCards from "./SavedCards";
+import SavedUPI from "./SavedUPI";
+import Wallets from "./Wallets";
+import Addresses from "./Addresses";
+import Overview from "./Overview";
+import VashudhraCredit from "./VashudhraCredit";
+
+// Import for Customer Order View
+import CustomerOrderView from "./CustomerOrderView";
 
 const App = () => (
   <Router>
@@ -22,16 +37,35 @@ const App = () => (
       <Route path="/cart" element={<Cart />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
+
+      {/* Collections component, now with dynamic category fetching and Razorpay */}
       <Route path="/collections" element={<Collections />} />
+
+      {/* These routes now point to CategoryPage, but if Collections handles it, 
+          you might simplify or adjust CategoryPage accordingly.
+          For now, keeping them as is based on previous App.jsx structure. */}
       <Route path="/mens-wear" element={<CategoryPage category="mens-wear" />} />
       <Route path="/womens-wear" element={<CategoryPage category="womens-wear" />} />
       <Route path="/accessories" element={<CategoryPage category="accessories" />} />
+
       <Route path="/admin" element={<Admin />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/profile" element={<ProfileForm />} />
-      <Route path="/payment" element={<Payment />} /> {/* ✅ Payment page */}
+      <Route path="/payment" element={<Payment />} />
+      <Route path="/orders" element={<Orders />} />
+      <Route path="/profile-details" element={<Profile />} />
+      <Route path="/coupons" element={<Coupons />} />
+      <Route path="/saved-cards" element={<SavedCards />} />
+      <Route path="/saved-upi" element={<SavedUPI />} />
+      <Route path="/wallets" element={<Wallets />} />
+      <Route path="/addresses" element={<Addresses />} />
+      <Route path="/overview" element={<Overview />} />
+      <Route path="/vashudhra-credit" element={<VashudhraCredit />} />
+
+      {/* Route for Customer Order View */}
+      <Route path="/customerorderview" element={<CustomerOrderView />} />
     </Routes>
   </Router>
 );

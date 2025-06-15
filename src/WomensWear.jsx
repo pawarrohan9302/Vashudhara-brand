@@ -1,4 +1,4 @@
-// src/components/WomensWear.jsx
+// src/WomensWear.jsx
 import React from 'react';
 
 const WomensWear = () => {

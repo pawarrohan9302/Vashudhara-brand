@@ -1,6 +1,7 @@
+// src/MensWear.jsx
 import React, { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
-import { database } from "./firebase";
+import { database } from "./firebase"; // Assuming firebase.js is directly in src/
 
 const MensWear = () => {
     const [products, setProducts] = useState([]);
@@ -14,7 +15,7 @@ const MensWear = () => {
             if (data) {
                 const mensProducts = Object.entries(data)
                     .map(([id, item]) => ({ id, ...item }))
-                    .filter((item) => item.category === "mens-wear");
+                    .filter((item) => item.category === "mens-wear"); // Filters for mens-wear
                 setProducts(mensProducts);
             } else {
                 setProducts([]);
@@ -45,7 +46,7 @@ const MensWear = () => {
                         color: "#a7f3d0",
                     }}
                 >
-                    Men's Wear
+                    Men's Wear {/* Title for MensWear */}
                 </h1>
                 <p style={{ fontSize: "18px", color: "#94a3b8", marginBottom: "50px" }}>
                     Explore our exclusive collection of men's fashion.

@@ -1,12 +1,14 @@
+// src/Collections.jsx
 import React, { useState, useEffect } from "react";
-import { database } from "./firebase";
-import { ref, onValue, push } from "firebase/database"; // Import 'push' for saving orders
+import { database } from "./firebase"; // Assuming firebase.js is correctly configured
+import { ref, onValue, push } from "firebase/database";
 
 const Collections = () => {
     const [collections, setCollections] = useState({});
     const [search, setSearch] = useState("");
     const [category, setCategory] = useState("mens-wear"); // Default category
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [loadingPayment, setLoadingPayment] = useState(false); // State for loading indicator
 
     // State variables for the purchase form
     const [quantity, setQuantity] = useState(1);
@@ -51,7 +53,10 @@ const Collections = () => {
         setVillage("");
     };
 
-    const handleCreateOrder = async () => {
+    // This function now handles payment via Razorpay
+    const handleRazorpayPayment = async () => {
+        if (loadingPayment) return; // Prevent double clicks
+
         // Basic validation for address fields
         if (!fullName || !surname || !pinCode || !stateName || !district || !village) {
             alert("Please fill all required address fields.");
@@ -63,42 +68,132 @@ const Collections = () => {
             return;
         }
 
-        const upiId = "9302909397@ybl"; // Your UPI ID
-        const amount = (selectedProduct.price * quantity) || 100; // Calculate total amount
-        const customer = `${fullName} ${surname}`;
-        const note = `Order for ${selectedProduct.title} by ${customer}`;
+        setLoadingPayment(true);
 
-        const upiUrl = `upi://pay?pa=${upiId}&pn=Vashudhara%20Store&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+        const totalAmount = (selectedProduct.price * quantity) || 100; // Calculate total amount
+        const amountInPaise = totalAmount * 100; // Razorpay expects amount in paise
 
-        // Save order details to Firebase for admin
+        // Step 1: Create an Order on your Server (Backend)
         try {
-            const ordersRef = ref(database, "orders"); // Reference to your 'orders' collection
-            await push(ordersRef, {
-                productId: selectedProduct.id,
-                productTitle: selectedProduct.title,
-                productImage: selectedProduct.image,
-                pricePerItem: selectedProduct.price,
-                quantity: quantity,
-                size: size,
-                customerName: fullName,
-                customerSurname: surname,
-                pinCode: pinCode,
-                state: stateName,
-                district: district,
-                village: village,
-                totalAmount: amount,
-                orderDate: new Date().toISOString(),
-                status: "Pending Payment Confirmation",
-                paymentMethod: "UPI",
-                upiIdUsed: upiId,
+            const orderCreationResponse = await fetch('/api/create-razorpay-order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ amount: amountInPaise }),
             });
 
-            alert("Order details saved! You will now be redirected to your UPI app for payment.\nAfter successful payment, please contact 9302909397 with your payment confirmation details to finalize your order.");
-            window.location.href = upiUrl;
-            setSelectedProduct(null); // Close modal after initiating payment and saving order
+            const orderData = await orderCreationResponse.json();
+
+            if (orderData.error) {
+                alert(`Error creating Razorpay order: ${orderData.error}`);
+                setLoadingPayment(false);
+                return;
+            }
+
+            // Step 2: Open Razorpay Checkout (Client-Side)
+            const options = {
+                key: 'rzp_test_eVi31zd0UZULF8', // ✅ Replaced with your provided Key ID
+                amount: orderData.amount, // Amount in paise, from server response
+                currency: orderData.currency,
+                name: 'Vashudhara Store',
+                description: `Purchase of ${selectedProduct.title} (Qty: ${quantity})`,
+                order_id: orderData.orderId, // Order ID from your server
+                handler: async (response) => {
+                    // This function is called after successful payment
+                    // Step 3: Verify Payment on your Server (Backend)
+                    try {
+                        const verificationRes = await fetch('/api/verify-razorpay-payment', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_signature: response.razorpay_signature,
+                            }),
+                        });
+
+                        const verificationData = await verificationRes.json();
+
+                        if (verificationData.success) {
+                            // Payment successfully verified on server!
+                            // Now, save the complete order details to Firebase
+                            const ordersRef = ref(database, "orders");
+                            await push(ordersRef, {
+                                productId: selectedProduct.id,
+                                productTitle: selectedProduct.title,
+                                productImage: selectedProduct.image,
+                                pricePerItem: selectedProduct.price,
+                                quantity: quantity,
+                                size: size,
+                                customerName: fullName,
+                                customerSurname: surname,
+                                pinCode: pinCode,
+                                state: stateName,
+                                district: district,
+                                village: village,
+                                totalAmount: totalAmount, // Use totalAmount in INR
+                                orderDate: new Date().toISOString(),
+                                status: "Payment Confirmed", // Update status
+                                paymentMethod: "Razorpay",
+                                razorpayPaymentId: response.razorpay_payment_id,
+                                razorpayOrderId: response.razorpay_order_id,
+                            });
+
+                            alert("Payment Successful! Your order has been placed.");
+                            setSelectedProduct(null); // Close modal
+                            // Optionally, redirect to an order confirmation page
+                            // navigate('/order-confirmation/' + orderData.orderId);
+                        } else {
+                            // Payment failed verification on server
+                            alert("Payment verification failed. Please contact support.");
+                            // You might still save a 'failed' or 'pending' order to Firebase here
+                        }
+                    } catch (error) {
+                        console.error("Error during payment verification or saving order:", error);
+                        alert("An error occurred during payment. Please try again or contact support.");
+                    } finally {
+                        setLoadingPayment(false);
+                    }
+                },
+                prefill: {
+                    name: `${fullName} ${surname}`,
+                    // email: 'user@example.com', // Add user's email if available
+                    // contact: '9999999999', // Add user's contact if available
+                },
+                notes: {
+                    address: `${village}, ${district}, ${stateName} - ${pinCode}`,
+                    orderDescription: `Order for ${selectedProduct.title}`,
+                },
+                theme: {
+                    color: '#34D399', // Tailwind's emerald-400
+                },
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('razorpay_payment_and_checkout_closed', function (response) {
+                // Payment modal closed by user, not necessarily a failure
+                if (!response.error) {
+                    console.log("Razorpay checkout closed by user without error.");
+                } else {
+                    console.log("Razorpay checkout closed with error:", response.error.code, response.error.description);
+                }
+                setLoadingPayment(false); // Stop loading when modal closes
+            });
+            rzp.on('razorpay_payment_failed', function (response) {
+                alert(`Payment failed: ${response.error.description}. Please try again.`);
+                console.error("Razorpay payment failed:", response.error);
+                setLoadingPayment(false);
+                // Optionally save a 'failed' order status to Firebase
+            });
+            rzp.open();
+
         } catch (error) {
-            console.error("Error saving order to Firebase:", error);
-            alert("There was an error placing your order. Please try again.");
+            console.error("Error initiating Razorpay payment:", error);
+            alert("Could not initiate payment. Please try again.");
+            setLoadingPayment(false);
         }
     };
 
@@ -287,14 +382,16 @@ const Collections = () => {
                         </p>
 
                         <button
-                            onClick={handleCreateOrder}
+                            onClick={handleRazorpayPayment}
                             className="bg-green-500 text-black py-3 rounded-full text-lg font-semibold mb-3 hover:bg-green-600 transition-colors duration-200"
+                            disabled={loadingPayment}
                         >
-                            Confirm Purchase & Pay
+                            {loadingPayment ? 'Processing Payment...' : 'Pay with Razorpay'}
                         </button>
                         <button
                             onClick={() => setSelectedProduct(null)}
                             className="bg-red-500 text-white py-3 rounded-full text-lg font-semibold hover:bg-red-600 transition-colors duration-200"
+                            disabled={loadingPayment}
                         >
                             Cancel
                         </button>

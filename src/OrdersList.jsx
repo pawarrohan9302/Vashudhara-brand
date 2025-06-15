@@ -36,7 +36,7 @@ const OrdersList = () => {
                             className="relative bg-white border-l-8 border-indigo-500 shadow-xl rounded-xl p-6 hover:scale-[1.02] transition"
                         >
                             <div className="absolute top-2 right-2 bg-green-200 text-green-800 px-3 py-1 text-xs font-bold rounded-full shadow">
-                                ORDER CONFIRMED
+                                {order.status || "ORDER CONFIRMED"}
                             </div>
 
                             {order.image && (
@@ -61,6 +61,19 @@ const OrdersList = () => {
                             <p className="mt-2 text-xs text-gray-500 italic">
                                 ⏱ {new Date(order.createdAt).toLocaleString()}
                             </p>
+
+                            {order.trackingUpdates && (
+                                <div className="mt-4 bg-gray-100 rounded-lg p-3 text-sm text-gray-700">
+                                    <p className="font-semibold mb-1">📦 Tracking Updates:</p>
+                                    <ul className="list-disc ml-5 space-y-1">
+                                        {order.trackingUpdates.map((update, idx) => (
+                                            <li key={idx}>
+                                                {new Date(update.time).toLocaleString()} - {update.status}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
 
                             <button
                                 className="mt-4 w-full bg-indigo-600 text-white py-2 rounded-md font-semibold shadow hover:bg-indigo-700 transition"

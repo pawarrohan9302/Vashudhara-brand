@@ -1,19 +1,22 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom"; // updated
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "./firebase";
 
 const Login = () => {
     const navigate = useNavigate();
+    const location = useLocation(); // updated
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+
+    const from = location.state?.from?.pathname || "/"; // updated
 
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            navigate("/");
+            navigate(from); // redirect to original page
         } catch (err) {
             setError("Invalid email or password");
         }

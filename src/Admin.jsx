@@ -5,6 +5,8 @@ import { ref, onValue, remove } from "firebase/database";
 import ShopProfile from "./ShopProfile";
 import ProductManager from "./ProductManager";
 import OrdersList from "./OrdersList";
+import AdminRedeemCodes from "./AdminRedeemCodes";
+import AdminTrackOrders from "./AdminTrackOrders"; // 🔥 New import
 
 const Admin = () => {
     const [passwordInput, setPasswordInput] = useState("");
@@ -14,7 +16,6 @@ const Admin = () => {
     const [products, setProducts] = useState([]);
     const correctPassword = "23122017";
 
-    // Fetch products
     useEffect(() => {
         const dbRef = ref(database, "products");
         onValue(dbRef, (snapshot) => {
@@ -31,15 +32,12 @@ const Admin = () => {
         });
     }, []);
 
-    // Delete product from products and collections
     const handleDelete = (productId) => {
-        // Find the product to get its category
         const product = products.find((p) => p.id === productId);
         if (!product) {
             alert("Product not found!");
             return;
         }
-
         if (!window.confirm("Are you sure you want to delete this product?")) return;
 
         const productRef = ref(database, `products/${productId}`);
@@ -48,10 +46,9 @@ const Admin = () => {
         Promise.all([remove(productRef), remove(collectionRef)])
             .then(() => {
                 setProducts(products.filter((p) => p.id !== productId));
-                alert("✅ Product deleted successfully from both products and collections!");
+                alert("✅ Product deleted successfully!");
             })
-            .catch((error) => {
-                console.error("Delete error:", error);
+            .catch(() => {
                 alert("❌ Failed to delete product.");
             });
     };
@@ -129,6 +126,15 @@ const Admin = () => {
                         Orders List
                     </button>
                     <button
+                        className={`text-left px-4 py-3 rounded-md font-medium transition ${activeTab === "trackOrders"
+                            ? "bg-indigo-600 text-white shadow"
+                            : "text-gray-700 hover:bg-indigo-100"
+                            }`}
+                        onClick={() => setActiveTab("trackOrders")}
+                    >
+                        Track Orders
+                    </button>
+                    <button
                         className={`text-left px-4 py-3 rounded-md font-medium transition ${activeTab === "productsList"
                             ? "bg-indigo-600 text-white shadow"
                             : "text-gray-700 hover:bg-indigo-100"
@@ -136,6 +142,15 @@ const Admin = () => {
                         onClick={() => setActiveTab("productsList")}
                     >
                         Products List ({products.length})
+                    </button>
+                    <button
+                        className={`text-left px-4 py-3 rounded-md font-medium transition ${activeTab === "redeemCodes"
+                            ? "bg-indigo-600 text-white shadow"
+                            : "text-gray-700 hover:bg-indigo-100"
+                            }`}
+                        onClick={() => setActiveTab("redeemCodes")}
+                    >
+                        Redeem Codes
                     </button>
                 </nav>
             </aside>
@@ -145,8 +160,7 @@ const Admin = () => {
                 {activeTab === "shopProfile" && <ShopProfile />}
                 {activeTab === "productManager" && <ProductManager />}
                 {activeTab === "ordersList" && <OrdersList />}
-
-                {/* Products List */}
+                {activeTab === "trackOrders" && <AdminTrackOrders />} {/* ✅ Track Orders tab */}
                 {activeTab === "productsList" && (
                     <div>
                         <h2 className="text-2xl font-bold mb-4">Products List ({products.length})</h2>
@@ -175,6 +189,7 @@ const Admin = () => {
                         </div>
                     </div>
                 )}
+                {activeTab === "redeemCodes" && <AdminRedeemCodes />}
             </main>
         </div>
     );

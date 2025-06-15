@@ -1,6 +1,10 @@
+// src/CategoryPage.jsx
 import React, { useEffect, useState } from "react";
-import { database } from "./firebase";
-import { ref, onValue, query, orderByChild, equalTo, push } from "firebase/database"; // Import 'push' for saving orders
+// All imports are now directly from the same src/ folder
+import { database, app } from "./firebase"; // firebase.js is in src/
+import { ref, onValue, query, orderByChild, equalTo, push, update } from "firebase/database";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import loadScript from "./loadRazorpayScript"; // loadRazorpayScript.js is in src/
 
 const CategoryPage = ({ category }) => {
     const [products, setProducts] = useState([]);
@@ -13,27 +17,30 @@ const CategoryPage = ({ category }) => {
     const [stateName, setStateName] = useState("");
     const [district, setDistrict] = useState("");
     const [village, setVillage] = useState("");
-    const [isLoading, setIsLoading] = useState(true); // Add loading state
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const functions = getFunctions(app);
+    const createRazorpayOrder = httpsCallable(functions, 'createRazorpayOrder');
 
     useEffect(() => {
-        setIsLoading(true); // Set loading to true before fetching
+        setIsLoading(true);
         const productsRef = ref(database, "products");
         const categoryQuery = query(productsRef, orderByChild("category"), equalTo(category));
         const unsubscribe = onValue(categoryQuery, (snapshot) => {
             const data = snapshot.val();
             const productArray = data ? Object.entries(data).map(([id, value]) => ({ id, ...value })) : [];
             setProducts(productArray);
-            setIsLoading(false); // Set loading to false after data is fetched
+            setIsLoading(false);
         }, (error) => {
             console.error("Error fetching products:", error);
-            setIsLoading(false); // Also set to false on error
+            setIsLoading(false);
         });
         return () => unsubscribe();
     }, [category]);
 
     const handleBuyClick = (product) => {
         setSelectedProduct(product);
-        // Reset form fields when a new product is selected
         setQuantity(1);
         setSize("M");
         setFullName("");
@@ -44,9 +51,14 @@ const CategoryPage = ({ category }) => {
         setVillage("");
     };
 
-    const handleCreateOrder = async () => { // Made async to use await with push
+    const handleCreateOrder = async () => {
         if (!fullName || !surname || !pinCode || !stateName || !district || !village) {
             alert("Please fill all required address fields.");
+            return;
+        }
+
+        if (!/^\d{6}$/.test(pinCode)) {
+            alert("Please enter a valid 6-digit PIN code.");
             return;
         }
 
@@ -55,17 +67,21 @@ const CategoryPage = ({ category }) => {
             return;
         }
 
-        const upiId = "9302909397@ybl";
-        const amount = (selectedProduct.price * quantity) || 100; // Calculate total amount
-        const customer = `${fullName} ${surname}`;
-        const note = `Order for ${selectedProduct.title} by ${customer}`;
+        setIsSubmitting(true);
 
-        const upiUrl = `upi://pay?pa=${upiId}&pn=Vashudhara%20Store&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+        const itemPrice = parseFloat(selectedProduct.price);
+        if (isNaN(itemPrice) || itemPrice <= 0) {
+            alert("Product price is invalid. Please select another product or contact support.");
+            setIsSubmitting(false);
+            return;
+        }
+        const amount = itemPrice * quantity; // Total amount in INR
 
-        // Save order details to Firebase for admin
+        let firebaseOrderId = null;
+
         try {
-            const ordersRef = ref(database, "orders"); // Reference to your 'orders' collection
-            await push(ordersRef, {
+            const ordersRef = ref(database, "orders");
+            const newOrderRef = await push(ordersRef, {
                 productId: selectedProduct.id,
                 productTitle: selectedProduct.title,
                 productImage: selectedProduct.image,
@@ -80,17 +96,125 @@ const CategoryPage = ({ category }) => {
                 village: village,
                 totalAmount: amount,
                 orderDate: new Date().toISOString(),
-                status: "Pending Payment Confirmation",
-                paymentMethod: "UPI",
-                upiIdUsed: upiId,
+                status: "Payment Pending",
+                paymentMethod: "Razorpay",
+            });
+            firebaseOrderId = newOrderRef.key;
+            console.log("Order saved to Firebase with ID:", firebaseOrderId);
+
+            console.log("Calling Cloud Function to create Razorpay order...");
+            const razorpayAmountInPaisa = amount * 100;
+
+            const result = await createRazorpayOrder({
+                amount: razorpayAmountInPaisa,
+                currency: "INR",
+                receipt: firebaseOrderId,
+                notes: {
+                    firebaseOrderId: firebaseOrderId,
+                    productTitle: selectedProduct.title,
+                    customerName: `${fullName} ${surname}`,
+                    pinCode: pinCode
+                }
             });
 
-            alert("Order details saved! You will now be redirected to your UPI app for payment.\nAfter successful payment, please contact 9302909397 with your payment confirmation details to finalize your order.");
-            window.location.href = upiUrl;
-            setSelectedProduct(null); // Close modal after initiating payment and saving order
+            const { orderId: razorpayServerOrderId } = result.data;
+            console.log("Razorpay Order ID from server:", razorpayServerOrderId);
+
+            const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
+
+            if (!res) {
+                alert("Razorpay SDK failed to load. Please check your internet connection.");
+                setIsSubmitting(false);
+                if (firebaseOrderId) {
+                    await update(ref(database, `orders/${firebaseOrderId}`), {
+                        status: "Payment Initiation Failed (SDK Load)",
+                    });
+                }
+                return;
+            }
+
+            const options = {
+                key: "rzp_test_eVi31zd0UZULF8", // Your TEST Key ID from Razorpay
+                amount: razorpayAmountInPaisa,
+                currency: "INR",
+                name: "Vashudhara Store",
+                description: `Order for ${selectedProduct.title}`,
+                image: "https://example.com/your_logo.png", // Replace with your store's logo URL
+                order_id: razorpayServerOrderId, // IMPORTANT: Use the order ID received from your Cloud Function
+                handler: async function (response) {
+                    console.log("Payment successful:", response);
+                    alert("Payment successful! Your order has been placed.");
+
+                    if (firebaseOrderId) {
+                        try {
+                            await update(ref(database, `orders/${firebaseOrderId}`), {
+                                status: "Payment Successful",
+                                razorpayPaymentId: response.razorpay_payment_id,
+                                razorpayOrderId: response.razorpay_order_id,
+                                razorpaySignature: response.razorpay_signature,
+                            });
+                            console.log("Order status updated in Firebase.");
+                        } catch (updateError) {
+                            console.error("Error updating order status in Firebase:", updateError);
+                            alert("Payment successful, but there was an error updating order status in our system. Please contact support with your payment ID: " + response.razorpay_payment_id);
+                        }
+                    }
+
+                    setSelectedProduct(null);
+                    setIsSubmitting(false);
+                },
+                prefill: {
+                    name: `${fullName} ${surname}`,
+                    email: "customer@example.com",
+                    contact: "9999999999",
+                },
+                notes: {
+                    address: `${village}, ${district}, ${stateName} - ${pinCode}`,
+                    customer_full_name: `${fullName} ${surname}`,
+                    product_title: selectedProduct.title,
+                    product_id: selectedProduct.id,
+                    firebaseOrderId: firebaseOrderId,
+                },
+                theme: {
+                    color: "#3399cc",
+                },
+                modal: {
+                    ondismiss: async function () {
+                        console.log('Payment dismissed by user.');
+                        alert("Payment was cancelled or failed. Please try again.");
+                        if (firebaseOrderId) {
+                            try {
+                                await update(ref(database, `orders/${firebaseOrderId}`), {
+                                    status: "Payment Cancelled By User",
+                                });
+                                console.log("Order status updated to 'Payment Cancelled' in Firebase.");
+                            } catch (updateError) {
+                                console.error("Error updating order status on dismiss:", updateError);
+                            }
+                        }
+                        setIsSubmitting(false);
+                    }
+                }
+            };
+
+            const paymentObject = new window.Razorpay(options);
+            paymentObject.open();
+
         } catch (error) {
-            console.error("Error saving order to Firebase:", error);
-            alert("There was an error placing your order. Please try again.");
+            console.error("Error during order creation or payment initiation:", error);
+            alert(`An error occurred: ${error.message || "Please try again."}`);
+
+            if (firebaseOrderId) {
+                try {
+                    await update(ref(database, `orders/${firebaseOrderId}`), {
+                        status: "Payment Initiation Failed (Cloud Function Error)",
+                        errorMessage: error.message,
+                    });
+                } catch (updateErr) {
+                    console.error("Failed to update status after initiation error:", updateErr);
+                }
+            }
+            setIsSubmitting(false);
         }
     };
 
@@ -101,11 +225,10 @@ const CategoryPage = ({ category }) => {
                     {category.replace("-", " ")}
                 </h1>
                 <p className="text-lg text-slate-400">
-                    Discover our latest {category.replace("-", " ")} products!
+                    Discover our latest {category.replace("-", " ")} products.
                 </p>
             </div>
 
-            {/* Products Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
                 {isLoading ? (
                     <p className="text-slate-400 col-span-full text-center">
@@ -135,7 +258,6 @@ const CategoryPage = ({ category }) => {
                                 loading="lazy"
                             />
 
-                            {/* Hover Overlay */}
                             <div className="absolute bottom-0 w-full bg-emerald-600/85 text-emerald-50 text-center py-3 opacity-0 transition-opacity duration-300 font-semibold text-base rounded-b-3xl group-hover:opacity-100 hover-overlay">
                                 View Details
                             </div>
@@ -156,11 +278,10 @@ const CategoryPage = ({ category }) => {
                 )}
             </div>
 
-            {/* --- Purchase Modal --- */}
             {selectedProduct && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-5"
-                    onClick={() => setSelectedProduct(null)}
+                    onClick={() => !isSubmitting && setSelectedProduct(null)}
                 >
                     <div
                         className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md text-white p-6 flex flex-col max-h-[90vh] overflow-y-auto"
@@ -175,7 +296,6 @@ const CategoryPage = ({ category }) => {
                             className="w-full h-48 object-contain rounded-lg mb-6"
                         />
 
-                        {/* Quantity and Size */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                             <div>
                                 <label className="block text-sm font-semibold mb-1 text-gray-300">Quantity:</label>
@@ -202,7 +322,6 @@ const CategoryPage = ({ category }) => {
                             </div>
                         </div>
 
-                        {/* Address Fields */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                             <div>
                                 <label className="block text-sm font-semibold mb-1 text-gray-300">Full Name:</label>
@@ -268,12 +387,14 @@ const CategoryPage = ({ category }) => {
                         <button
                             onClick={handleCreateOrder}
                             className="bg-green-500 text-black py-3 rounded-full text-lg font-semibold mb-3 hover:bg-green-600 transition-colors duration-200"
+                            disabled={isSubmitting}
                         >
-                            Confirm Purchase & Pay
+                            {isSubmitting ? "Processing Payment..." : "Confirm Purchase & Pay"}
                         </button>
                         <button
                             onClick={() => setSelectedProduct(null)}
                             className="bg-red-500 text-white py-3 rounded-full text-lg font-semibold hover:bg-red-600 transition-colors duration-200"
+                            disabled={isSubmitting}
                         >
                             Cancel
                         </button>
