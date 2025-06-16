@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { auth } from "./firebase"; // Make sure your firebase config is here
+// Make sure your firebase config is here and auth is exported from it
+import { auth } from "./firebase";
 import {
     FaLeaf,
     FaGem,
@@ -92,9 +93,9 @@ const Header = () => {
                     { to: "/", label: "Home", icon: <FaHome /> },
                     { to: "/collections", label: "Collections", icon: <FaStore /> },
                     {
-                        to: "/mens-wear",
+                        to: "/mens-wear", // Assuming this path is for earrings
                         label: "Earring Elegance",
-                        icon: <FaGem />,
+                        icon: <FaGem />, // Only FaGem icon now
                     },
                     { to: "/womens-wear", label: "Rings", icon: <FaRing /> },
                     { to: "/accessories", label: "Accessories", icon: <FaGift /> },
@@ -108,20 +109,20 @@ const Header = () => {
                             key={idx}
                             to={to}
                             className="nav-link-item"
-                            style={{
+                            style={{ // Inline styles for dynamic state (active/inactive)
                                 ...linkBaseStyle,
                                 color: isActive ? "var(--primary-color)" : "var(--text-color)",
                                 boxShadow: isActive ? "0 0 6px var(--primary-color)" : "none",
                                 backgroundColor: isActive ? "var(--accent-bg-color)" : "transparent",
                                 fontWeight: isActive ? "700" : "600",
                             }}
-                            onMouseEnter={(e) => {
+                            onMouseEnter={(e) => { // Inline styles for hover effects
                                 e.currentTarget.style.color = "var(--primary-color)";
                                 e.currentTarget.style.backgroundColor = "var(--accent-hover-bg-color)";
                                 e.currentTarget.style.boxShadow = "0 0 10px var(--primary-color)";
                                 e.currentTarget.style.transform = "scale(1.05)";
                             }}
-                            onMouseLeave={(e) => {
+                            onMouseLeave={(e) => { // Inline styles for leaving hover state
                                 e.currentTarget.style.color = isActive ? "var(--primary-color)" : "var(--text-color)";
                                 e.currentTarget.style.backgroundColor = isActive ? "var(--accent-bg-color)" : "transparent";
                                 e.currentTarget.style.boxShadow = isActive ? "0 0 6px var(--primary-color)" : "none";
@@ -191,31 +192,35 @@ const Header = () => {
                     {showProfileMenu && (
                         <div className="profile-dropdown-menu">
                             <div className="dropdown-header">
-                                Welcome!
+                                वेलकम! (Welcome!)
                                 <br />
-                                To access account and manage orders
+                                अकाउंट एक्सेस और ऑर्डर मैनेज करने के लिए (To access account and manage orders)
                             </div>
                             {user ? (
                                 <>
+                                    {/* Link to Orders page for logged-in users */}
+                                    <Link to="/orders" onClick={() => setShowProfileMenu(false)} className="dropdown-item">
+                                        ऑर्डर (Orders)
+                                    </Link>
                                     <button onClick={handleLogout} className="dropdown-item logout-button">
-                                        Logout
+                                        लॉगआउट (Logout)
                                     </button>
                                 </>
                             ) : (
                                 <Link to="/login" onClick={() => setShowProfileMenu(false)} className="dropdown-item">
-                                    Login / Signup
+                                    लॉगिन / साइनअप (Login / Signup)
                                 </Link>
                             )}
-                            <Link to="/orders" onClick={() => setShowProfileMenu(false)} className="dropdown-item">Orders</Link>
-                            <Link to="/wishlist" onClick={() => setShowProfileMenu(false)} className="dropdown-item">Wishlist</Link>
-                            <Link to="/gift-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item">Gift Cards</Link>
-                            <Link to="/contact" onClick={() => setShowProfileMenu(false)} className="dropdown-item">Contact Us</Link>
-                            <div className="dropdown-section-title">Vashudhara Insider <span className="new-badge">New</span></div>
-                            <Link to="/vashudhara-credit" onClick={() => setShowProfileMenu(false)} className="dropdown-item">Vashudhara Credit</Link>
-                            <Link to="/coupons" onClick={() => setShowProfileMenu(false)} className="dropdown-item">Coupons</Link>
-                            <Link to="/saved-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item">Saved Cards</Link>
-                            <Link to="/saved-vpa" onClick={() => setShowProfileMenu(false)} className="dropdown-item">Saved VPA</Link>
-                            <Link to="/saved-addresses" onClick={() => setShowProfileMenu(false)} className="dropdown-item">Saved Addresses</Link>
+                            <Link to="/orders" onClick={() => setShowProfileMenu(false)} className="dropdown-item">ऑर्डर और वापसी (Orders & Returns)</Link>
+                            <Link to="/wishlist" onClick={() => setShowProfileMenu(false)} className="dropdown-item">विशलिस्ट (Wishlist)</Link>
+                            <Link to="/gift-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item">गिफ्ट कार्ड्स (Gift Cards)</Link>
+                            <Link to="/contact" onClick={() => setShowProfileMenu(false)} className="dropdown-item">हमसे संपर्क करें (Contact Us)</Link>
+                            <div className="dropdown-section-title">वशुधारा इनसाइडर (Vashudhara Insider) <span className="new-badge">नया (New)</span></div>
+                            <Link to="/vashudhara-credit" onClick={() => setShowProfileMenu(false)} className="dropdown-item">वशुधारा क्रेडिट (Vashudhara Credit)</Link>
+                            <Link to="/coupons" onClick={() => setShowProfileMenu(false)} className="dropdown-item">कूपन (Coupons)</Link>
+                            <Link to="/saved-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item">सहेजे गए कार्ड (Saved Cards)</Link>
+                            <Link to="/saved-vpa" onClick={() => setShowProfileMenu(false)} className="dropdown-item">सहेजे गए UPI (Saved UPI)</Link>
+                            <Link to="/saved-addresses" onClick={() => setShowProfileMenu(false)} className="dropdown-item">सहेजे गए पते (Saved Addresses)</Link>
                         </div>
                     )}
                 </div>
