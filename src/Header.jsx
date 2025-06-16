@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
-// Make sure your firebase config is here and auth is exported from it
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { auth } from "./firebase";
+
 import {
     FaLeaf,
     FaGem,
@@ -9,28 +9,28 @@ import {
     FaGift,
     FaStore,
     FaInfoCircle,
-    FaPhoneAlt,
     FaShoppingCart,
     FaInstagram,
     FaHome,
-    FaUserCircle, // Added for profile icon
-    FaAngleDown, // Added for dropdown arrow
+    FaUserCircle,
+    FaAngleDown,
 } from "react-icons/fa";
 
 const Header = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [user, setUser] = useState(null);
-    const [showProfileMenu, setShowProfileMenu] = useState(false); // State for dropdown visibility
-    const profileRef = useRef(null); // Ref for profile button/menu for click outside logic
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const profileRef = useRef(null);
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+            console.log("Firebase Auth State Changed. Current User:", currentUser ? currentUser.email : "No user logged in");
             setUser(currentUser);
         });
         return () => unsubscribe();
     }, []);
 
-    // Close profile menu when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -43,92 +43,55 @@ const Header = () => {
         };
     }, []);
 
-    const handleLogout = () => {
-        auth.signOut();
-        setUser(null);
-        setShowProfileMenu(false); // Close menu on logout
-        navigate("/");
+    const handleLogout = async () => {
+        try {
+            await auth.signOut();
+            setUser(null);
+            setShowProfileMenu(false);
+            navigate("/");
+            console.log("User logged out successfully.");
+        } catch (error) {
+            console.error("Error logging out:", error.message);
+        }
     };
 
     const toggleProfileMenu = () => {
         setShowProfileMenu(!showProfileMenu);
     };
 
-    // Base style for navigation links (applies to mobile first)
-    const linkBaseStyle = {
-        display: "flex",
-        alignItems: "center",
-        textDecoration: "none",
-        padding: "8px 12px", // Compact padding for mobile
-        borderRadius: "8px",
-        fontWeight: "600",
-        fontSize: "13px", // Compact font size for mobile
-        gap: "6px",
-        transition: "all 0.3s ease",
-        cursor: "pointer",
-        userSelect: "none",
-        whiteSpace: "nowrap",
-        flexShrink: 0, // Prevent shrinking too much
-    };
+    const currentPath = location.pathname;
 
-    const currentPath = window.location.pathname;
+    const navLinks = [
+        { to: "/", label: "Home", icon: <FaHome /> },
+        { to: "/collections", label: "Collections", icon: <FaStore /> },
+        { to: "/mens-wear", label: "Earring Elegance", icon: <FaGem /> },
+        { to: "/womens-wear", label: "Rings", icon: <FaRing /> },
+        { to: "/accessories", label: "Accessories", icon: <FaGift /> },
+        { to: "/cart", label: "Cart", icon: <FaShoppingCart /> },
+        { to: "/about", label: "About", icon: <FaInfoCircle /> },
+    ];
 
     return (
         <header className="header-container">
-            {/* Logo */}
             <div
                 onClick={() => navigate("/")}
                 className="logo-section"
-                onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.1)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
                 title="Go to Home"
             >
                 <FaLeaf className="logo-icon" />
                 <span>Vashudhara</span>
             </div>
 
-            {/* Navigation Links */}
-            <nav className="nav-links-section nav-scroll">
-                {[
-                    { to: "/", label: "Home", icon: <FaHome /> },
-                    { to: "/collections", label: "Collections", icon: <FaStore /> },
-                    {
-                        to: "/mens-wear", // Assuming this path is for earrings
-                        label: "Earring Elegance",
-                        icon: <FaGem />, // Only FaGem icon now
-                    },
-                    { to: "/womens-wear", label: "Rings", icon: <FaRing /> },
-                    { to: "/accessories", label: "Accessories", icon: <FaGift /> },
-                    { to: "/cart", label: "Cart", icon: <FaShoppingCart /> },
-                    { to: "/about", label: "About", icon: <FaInfoCircle /> },
-                    { to: "/contact", label: "Contact", icon: <FaPhoneAlt /> },
-                ].map(({ to, icon, label }, idx) => {
-                    const isActive = currentPath.startsWith(to);
+            <nav className="nav-links-section" aria-label="Main Navigation">
+                {navLinks.map(({ to, icon, label }) => {
+                    const isSpecificActive = (to === '/' && currentPath === '/') || (to !== '/' && currentPath.startsWith(to));
+
                     return (
                         <Link
-                            key={idx}
+                            key={label}
                             to={to}
-                            className="nav-link-item"
-                            style={{ // Inline styles for dynamic state (active/inactive)
-                                ...linkBaseStyle,
-                                color: isActive ? "var(--primary-color)" : "var(--text-color)",
-                                boxShadow: isActive ? "0 0 6px var(--primary-color)" : "none",
-                                backgroundColor: isActive ? "var(--accent-bg-color)" : "transparent",
-                                fontWeight: isActive ? "700" : "600",
-                            }}
-                            onMouseEnter={(e) => { // Inline styles for hover effects
-                                e.currentTarget.style.color = "var(--primary-color)";
-                                e.currentTarget.style.backgroundColor = "var(--accent-hover-bg-color)";
-                                e.currentTarget.style.boxShadow = "0 0 10px var(--primary-color)";
-                                e.currentTarget.style.transform = "scale(1.05)";
-                            }}
-                            onMouseLeave={(e) => { // Inline styles for leaving hover state
-                                e.currentTarget.style.color = isActive ? "var(--primary-color)" : "var(--text-color)";
-                                e.currentTarget.style.backgroundColor = isActive ? "var(--accent-bg-color)" : "transparent";
-                                e.currentTarget.style.boxShadow = isActive ? "0 0 6px var(--primary-color)" : "none";
-                                e.currentTarget.style.transform = "scale(1)";
-                            }}
-                            aria-current={isActive ? "page" : undefined}
+                            className={`nav-link-item ${isSpecificActive ? "active" : ""}`}
+                            aria-current={isSpecificActive ? "page" : undefined}
                             title={label}
                         >
                             <span className="nav-link-icon">{icon}</span>
@@ -138,45 +101,26 @@ const Header = () => {
                 })}
             </nav>
 
-            {/* User Authentication & Social Link */}
             <div className="user-action-section">
-                {/* Instagram Icon */}
                 <a
                     href="https://www.instagram.com/vashudharastore/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    title="Instagram"
+                    title="Visit us on Instagram"
                     className="instagram-link"
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.2)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+                    aria-label="Instagram Profile"
                 >
                     <FaInstagram />
                 </a>
 
-                {/* Profile Section with Dropdown */}
                 <div className="profile-dropdown-container" ref={profileRef}>
                     <button
                         onClick={toggleProfileMenu}
-                        className="auth-button profile-toggle-button"
-                        onMouseEnter={(e) => {
-                            if (!showProfileMenu) { // Only apply hover if not already active/open
-                                e.currentTarget.style.backgroundColor = "#00ccb3";
-                                e.currentTarget.style.transform = "scale(1.05)";
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            if (!showProfileMenu) { // Only revert if not active/open
-                                e.currentTarget.style.backgroundColor = "var(--primary-color)";
-                                e.currentTarget.style.transform = "scale(1)";
-                            }
-                        }}
-                        style={{
-                            backgroundColor: showProfileMenu ? "#00ccb3" : "var(--primary-color)",
-                            transform: showProfileMenu ? "scale(1.05)" : "scale(1)"
-                        }}
-                        title={user ? user.email : "Profile"}
+                        className={`auth-button profile-toggle-button ${showProfileMenu ? 'active-profile-button' : ''}`}
+                        title={user ? `Logged in as ${user.email}` : "Profile / Login"}
                         aria-expanded={showProfileMenu}
                         aria-haspopup="true"
+                        aria-controls="profile-menu"
                     >
                         <FaUserCircle className="profile-icon" />
                         <span className="profile-text">
@@ -190,117 +134,196 @@ const Header = () => {
                     </button>
 
                     {showProfileMenu && (
-                        <div className="profile-dropdown-menu">
+                        <div id="profile-menu" className="profile-dropdown-menu" role="menu">
                             <div className="dropdown-header">
-                                वेलकम! (Welcome!)
+                                Welcome{user ? `, ${user.email.split('@')[0]}` : ""}!
                                 <br />
-                                अकाउंट एक्सेस और ऑर्डर मैनेज करने के लिए (To access account and manage orders)
+                                To access account and manage orders
                             </div>
                             {user ? (
-                                <>
-                                    {/* Link to Orders page for logged-in users */}
-                                    <Link to="/orders" onClick={() => setShowProfileMenu(false)} className="dropdown-item">
-                                        ऑर्डर (Orders)
-                                    </Link>
-                                    <button onClick={handleLogout} className="dropdown-item logout-button">
-                                        लॉगआउट (Logout)
-                                    </button>
-                                </>
+                                <button onClick={handleLogout} className="dropdown-item logout-button" role="menuitem">
+                                    Logout
+                                </button>
                             ) : (
-                                <Link to="/login" onClick={() => setShowProfileMenu(false)} className="dropdown-item">
-                                    लॉगिन / साइनअप (Login / Signup)
+                                <Link to="/login" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">
+                                    Login / Signup
                                 </Link>
                             )}
-                            <Link to="/orders" onClick={() => setShowProfileMenu(false)} className="dropdown-item">ऑर्डर और वापसी (Orders & Returns)</Link>
-                            <Link to="/wishlist" onClick={() => setShowProfileMenu(false)} className="dropdown-item">विशलिस्ट (Wishlist)</Link>
-                            <Link to="/gift-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item">गिफ्ट कार्ड्स (Gift Cards)</Link>
-                            <Link to="/contact" onClick={() => setShowProfileMenu(false)} className="dropdown-item">हमसे संपर्क करें (Contact Us)</Link>
-                            <div className="dropdown-section-title">वशुधारा इनसाइडर (Vashudhara Insider) <span className="new-badge">नया (New)</span></div>
-                            <Link to="/vashudhara-credit" onClick={() => setShowProfileMenu(false)} className="dropdown-item">वशुधारा क्रेडिट (Vashudhara Credit)</Link>
-                            <Link to="/coupons" onClick={() => setShowProfileMenu(false)} className="dropdown-item">कूपन (Coupons)</Link>
-                            <Link to="/saved-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item">सहेजे गए कार्ड (Saved Cards)</Link>
-                            <Link to="/saved-vpa" onClick={() => setShowProfileMenu(false)} className="dropdown-item">सहेजे गए UPI (Saved UPI)</Link>
-                            <Link to="/saved-addresses" onClick={() => setShowProfileMenu(false)} className="dropdown-item">सहेजे गए पते (Saved Addresses)</Link>
+                            <Link to="/orders" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Orders</Link>
+                            <Link to="/wishlist" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Wishlist</Link>
+                            <Link to="/gift-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Gift Cards</Link>
+                            <div className="dropdown-section-title">Vashudhara Insider <span className="new-badge">New</span></div>
+                            <Link to="/vashudhara-credit" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Vashudhara Credit</Link>
+                            <Link to="/coupons" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Coupons</Link>
+                            <Link to="/saved-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved Cards</Link>
+                            <Link to="/saved-vpa" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved VPA</Link>
+                            <Link to="/saved-addresses" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved Addresses</Link>
+                            <Link to="/contact" onClick={() => setShowProfileMenu(false)} className="dropdown-item contact-dropdown-item" role="menuitem">Contact Us</Link>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Internal CSS for Responsiveness & Modern UI */}
             <style>
                 {`
                 /* CSS Variables for easy theme management */
                 :root {
                     --primary-gradient: linear-gradient(90deg, #0f2027, #203a43, #2c5364);
-                    --primary-color: #00ffe7;
-                    --text-color: #ccc;
-                    --accent-bg-color: rgba(0,255,231,0.1);
-                    --accent-hover-bg-color: rgba(0,255,231,0.15);
-                    --instagram-color: #e1306c;
-                    --dropdown-bg: #1a2a3a; /* Darker background for dropdown */
-                    --dropdown-item-hover: rgba(0,255,231,0.2);
-                    --border-color: rgba(0,255,231,0.3);
+                    --primary-color: #00ffe7; /* Bright cyan/teal */
+                    --text-color: #e0e0e0; /* Lighter grey for general text */
+                    --accent-bg-color: rgba(0,255,231,0.1); /* Light transparent cyan */
+                    --accent-hover-color: #00ccb3; /* Slightly darker primary color on hover */
+                    --instagram-color: #e1306c; /* Instagram's signature pinkish-red */
+                    --dropdown-bg: #152535; /* Darker background for dropdown */
+                    --dropdown-item-hover: rgba(0,255,231,0.25); /* More visible transparent cyan for dropdown item hover */
+                    --border-color: rgba(0,255,231,0.3); /* Stronger transparent cyan for borders */
+                    --light-text-color: #a0a0a0; /* Lighter grey for secondary text */
+                    --button-text-color: #000; /* Black for primary buttons */
+                    --new-badge-bg: #ffc107; /* Yellowish for new badge */
+                    --new-badge-text: #333; /* Dark text for new badge */
                 }
 
-                /* Base styles (Mobile First) */
+                /* General reset/base styles for better consistency */
+                *, *::before, *::after {
+                    box-sizing: border-box;
+                    margin: 0;
+                    padding: 0;
+                }
+                body {
+                    font-family: 'Poppins', sans-serif;
+                    -webkit-font-smoothing: antialiased;
+                    -moz-osx-font-smoothing: grayscale;
+                    background-color: #1a1a1a; /* A dark background for contrast */
+                }
+
+
+                /* Base styles (Mobile First - applies to all screens by default) */
                 .header-container {
                     display: flex;
-                    flex-direction: column; /* Stack vertically on small screens */
-                    justify-content: center;
-                    align-items: center;
+                    flex-direction: column; /* Stacks vertically on small screens */
+                    justify-content: center; /* Center horizontally in column mode */
+                    align-items: center; /* Center horizontally in column mode */
                     background: var(--primary-gradient);
-                    padding: 15px 20px;
+                    padding: 10px 15px; /* Slightly more padding for mobile */
                     color: var(--text-color);
                     position: sticky;
                     top: 0;
                     z-index: 9999;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.4); /* Stronger, deeper shadow */
                     font-family: 'Poppins', sans-serif;
-                    user-select: none;
-                    min-height: auto; /* Adjust height based on content */
-                    gap: 15px; /* Spacing between main sections (logo, nav, user) */
+                    user-select: none; /* Prevent text selection */
+                    min-height: auto; /* Allow height to adjust */
+                    gap: 12px; /* Increased spacing between main sections (logo, nav, user actions) */
+                    flex-wrap: wrap; /* Allow main sections to wrap if needed */
                 }
 
                 .logo-section {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
+                    gap: 8px; /* Slightly larger gap for mobile */
                     font-weight: 700;
-                    font-size: 24px;
-                    letter-spacing: 3px;
+                    font-size: 22px; /* A bit larger for mobile logo */
+                    letter-spacing: 2.5px; /* Refined letter spacing */
                     cursor: pointer;
                     color: var(--primary-color);
-                    text-shadow: 0 0 10px var(--primary-color);
-                    transition: transform 0.3s ease;
-                    flex-shrink: 0;
+                    text-shadow: 0 0 10px var(--primary-color), 0 0 15px rgba(0,255,231,0.5); /* More pronounced glow */
+                    transition: transform 0.2s ease, text-shadow 0.2s ease;
+                    flex-shrink: 0; /* Prevent shrinking */
                 }
-
+                .logo-section:hover {
+                    transform: scale(1.08); /* Scale up on hover */
+                    text-shadow: 0 0 12px var(--primary-color), 0 0 20px rgba(0,255,231,0.7); /* Intensify glow on hover */
+                }
                 .logo-icon {
-                    font-size: 35px;
+                    font-size: 32px; /* Slightly larger icon for mobile */
                     color: var(--primary-color);
-                    text-shadow: 0 0 12px var(--primary-color);
+                    text-shadow: 0 0 12px var(--primary-color); /* Stronger shadow */
                 }
 
+                /* Navigation Links Section - Key for Horizontal Scroll */
                 .nav-links-section {
                     display: flex;
-                    flex-wrap: wrap; /* Allow navigation items to wrap on multiple lines */
-                    justify-content: center; /* Center items when wrapped */
+                    flex-wrap: nowrap; /* IMPORTANT: Ensures items stay in a single row */
+                    justify-content: flex-start; /* Aligns items to start for scroll */
                     align-items: center;
-                    gap: 12px; /* Spacing between individual nav links */
-                    margin: 15px 0; /* Vertical margin for separation on mobile */
-                    flex: 1 1 auto; /* Allows nav to take available space */
-                    min-width: 0; /* Important for flex items to prevent overflow */
-                    overflow-x: hidden; /* Hide horizontal scrollbar if content overflows */
-                    scrollbar-width: none; /* For Firefox */
+                    gap: 12px; /* Increased spacing between individual nav links */
+                    margin: 8px 0; /* Vertical margin for separation */
+                    width: 100%; /* IMPORTANT: Ensures it takes full width for scroll to work */
+                    overflow-x: auto; /* IMPORTANT: Enables horizontal scrolling */
+                    -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS */
+                    scrollbar-width: none; /* Hide scrollbar for Firefox */
+                    padding-bottom: 8px; /* Space for potential scrollbar/visual cue on mobile */
+                    border-bottom: 1px solid rgba(255,255,255,0.1); /* Subtle bottom border as scroll indicator */
+                    min-width: 0; /* Fixes potential flexbox overflow issues on narrow screens */
                 }
-
-                /* Hide scrollbar for Webkit browsers */
-                .nav-scroll::-webkit-scrollbar {
+                /* Hide scrollbar for Webkit browsers (Chrome, Safari) */
+                .nav-links-section::-webkit-scrollbar {
                     display: none;
                 }
 
+                .nav-link-item {
+                    display: flex;
+                    flex-direction: column; /* Stack icon and text vertically */
+                    align-items: center; /* Center horizontally within the link */
+                    text-decoration: none;
+                    padding: 8px 10px; /* Reduced horizontal padding to prevent crowding */
+                    border-radius: 8px;
+                    font-weight: 600;
+                    font-size: 13px;
+                    gap: 4px; /* Reduced gap between icon and text */
+                    transition: all 0.25s ease;
+                    cursor: pointer;
+                    user-select: none;
+                    white-space: nowrap; /* Ensures text never wraps */
+                    flex-shrink: 0; /* Prevents items from shrinking */
+                    color: var(--text-color);
+                    background-color: transparent; /* No background by default */
+                    box-shadow: none;
+                    position: relative; /* For the active bottom line */
+                    overflow: hidden;
+                    border: 1px solid transparent; /* No border by default */
+                }
+
+                /* Active state indicator (only bottom line now) */
+                .nav-link-item.active {
+                    color: var(--primary-color);
+                    background-color: transparent; /* Keep background transparent */
+                    border-color: transparent; /* No border in active state */
+                    box-shadow: none; /* No box shadow in active state */
+                }
+                .nav-link-item.active::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 3px; /* Thickness of the line */
+                    background-color: var(--primary-color);
+                    border-radius: 0 0 3px 3px;
+                    box-shadow: 0 0 5px var(--primary-color);
+                    animation: slideInBottom 0.3s ease-out forwards;
+                }
+                @keyframes slideInBottom {
+                    from { transform: translateY(100%); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+
+                /* Hover effect: Only change icon and text color */
+                .nav-link-item:hover {
+                    color: var(--accent-hover-color); /* Change text and icon color on hover */
+                    background-color: transparent; /* Ensure no background change */
+                    box-shadow: none; /* No box shadow on hover */
+                    transform: translateY(-2px); /* Slight lift on hover, optional */
+                }
+                /* Keep active item text color and glow, but no extra transform on hover */
+                .nav-link-item.active:hover {
+                    color: var(--primary-color); /* Active item remains primary color on hover */
+                    transform: translateY(0); /* Active items stay in place */
+                    background-color: transparent;
+                    box-shadow: none;
+                }
                 .nav-link-icon {
-                    font-size: 16px;
+                    font-size: 15px; /* Larger icons for mobile nav */
                     display: flex;
                     align-items: center;
                 }
@@ -308,97 +331,103 @@ const Header = () => {
                 .user-action-section {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 12px;
                     font-size: 13px;
                     font-weight: 600;
-                    color: #d1d1d1;
+                    color: var(--text-color);
                     flex-shrink: 0;
-                    margin-top: 10px; /* Space from nav on mobile */
-                    width: 100%; /* Take full width on mobile */
-                    justify-content: center; /* Center content on mobile */
-                    white-space: nowrap; /* Prevent line breaks within this section */
+                    margin-top: 12px;
+                    width: 100%;
+                    justify-content: center;
+                    white-space: nowrap;
+                    position: relative;
                 }
 
                 .instagram-link {
                     color: var(--instagram-color);
                     font-size: 20px;
-                    text-shadow: 0 0 6px var(--instagram-color);
-                    transition: transform 0.2s ease;
+                    text-shadow: 0 0 8px var(--instagram-color);
+                    transition: transform 0.2s ease, text-shadow 0.2s ease;
+                }
+                .instagram-link:hover {
+                    transform: scale(1.25);
+                    text-shadow: 0 0 12px var(--instagram-color), 0 0 20px rgba(225,48,108,0.7);
                 }
 
-                .user-email {
-                    max-width: 100px; /* Constraint for email on smaller screens */
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    cursor: default;
-                }
                 .user-email-display {
-                    max-width: 90px; /* Adjust for icon and arrow */
+                    max-width: 90px;
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
                     display: inline-block;
                     vertical-align: middle;
+                    color: var(--button-text-color);
                 }
 
                 .auth-button {
-                    padding: 6px 16px;
-                    border-radius: 20px;
+                    padding: 8px 15px;
+                    border-radius: 25px;
                     cursor: pointer;
                     background-color: var(--primary-color);
                     border: none;
-                    color: #000;
+                    color: var(--button-text-color);
                     font-weight: 700;
                     box-shadow: 0 0 8px var(--primary-color);
-                    transition: background-color 0.3s ease, transform 0.2s ease;
+                    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
                     user-select: none;
                     display: flex;
                     align-items: center;
-                    gap: 5px;
-                }
-
-                /* Profile Dropdown Specific Styles */
-                .profile-dropdown-container {
-                    position: relative;
-                    display: inline-block; /* Allows the button and menu to position correctly */
-                }
-
-                .profile-toggle-button {
-                    min-width: 100px; /* Ensure button has enough space */
+                    gap: 6px;
+                    min-width: 100px;
                     justify-content: center;
-                    padding: 6px 12px;
                 }
-
+                .auth-button:hover {
+                    background-color: #00ccb3;
+                    transform: scale(1.05);
+                    box-shadow: 0 0 12px #00ccb3;
+                }
+                .auth-button.active-profile-button {
+                    background-color: #00ccb3;
+                    transform: scale(1.05);
+                    box-shadow: 0 0 12px #00ccb3;
+                }
                 .profile-icon {
                     font-size: 18px;
                 }
-
                 .dropdown-arrow {
-                    margin-left: 5px;
-                    transition: transform 0.3s ease;
+                    margin-left: 4px;
+                    transition: transform 0.2s ease;
                 }
-
                 .dropdown-arrow.open {
                     transform: rotate(180deg);
                 }
 
+                .profile-dropdown-container {
+                    position: relative;
+                    display: inline-block;
+                    margin-left: 8px;
+                }
                 .profile-dropdown-menu {
                     position: absolute;
-                    top: 100%; /* Position below the button */
-                    right: 0; /* Align to the right of the button */
+                    top: calc(100% + 10px);
+                    right: 0;
                     background-color: var(--dropdown-bg);
                     border: 1px solid var(--border-color);
-                    border-radius: 8px;
-                    box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+                    border-radius: 10px;
+                    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
                     min-width: 220px;
-                    z-index: 10000; /* Ensure it's above other content */
+                    max-width: 95vw;
+                    z-index: 10000;
                     display: flex;
                     flex-direction: column;
                     padding: 10px 0;
-                    margin-top: 5px; /* Small gap between button and menu */
+                    transform-origin: top right;
+                    animation: fadeInScale 0.3s ease-out forwards;
                 }
-
+                @keyframes fadeInScale {
+                    from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
+                }
                 .dropdown-header {
                     padding: 10px 15px;
                     font-size: 14px;
@@ -406,45 +435,44 @@ const Header = () => {
                     border-bottom: 1px solid var(--border-color);
                     margin-bottom: 10px;
                     font-weight: 600;
+                    line-height: 1.5;
                 }
-
                 .dropdown-item {
                     display: flex;
                     align-items: center;
-                    padding: 8px 15px;
+                    padding: 9px 15px;
                     text-decoration: none;
                     color: var(--text-color);
                     font-size: 14px;
                     font-weight: 500;
-                    transition: background-color 0.2s ease, color 0.2s ease;
+                    transition: background-color 0.2s ease, color 0.2s ease, border-left-color 0.2s ease;
                     cursor: pointer;
-                    white-space: nowrap; /* Prevent wrapping in dropdown */
+                    white-space: nowrap;
+                    border-left: 4px solid transparent;
                 }
-
                 .dropdown-item:hover {
                     background-color: var(--dropdown-item-hover);
                     color: var(--primary-color);
+                    border-left-color: var(--primary-color);
                 }
-
                 .dropdown-section-title {
                     padding: 10px 15px 5px;
                     font-size: 13px;
-                    color: #999;
+                    color: var(--light-text-color);
                     font-weight: 600;
                     border-top: 1px solid var(--border-color);
-                    margin-top: 10px;
+                    margin-top: 12px;
                 }
-
                 .new-badge {
-                    background-color: #ffc107; /* Yellowish for new */
-                    color: #333;
-                    font-size: 10px;
+                    background-color: var(--new-badge-bg);
+                    color: var(--new-badge-text);
+                    font-size: 9px;
                     padding: 2px 6px;
                     border-radius: 4px;
                     margin-left: 5px;
                     font-weight: 700;
+                    vertical-align: middle;
                 }
-
                 .logout-button {
                     background: none;
                     border: none;
@@ -452,92 +480,120 @@ const Header = () => {
                     cursor: pointer;
                     text-align: left;
                     width: 100%;
-                    padding: 8px 15px;
+                    padding: 9px 15px;
                     font-size: 14px;
                     font-weight: 500;
-                    transition: background-color 0.2s ease, color 0.2s ease;
+                    transition: background-color 0.2s ease, color 0.2s ease, border-left-color 0.2s ease;
+                    border-left: 4px solid transparent;
                 }
                 .logout-button:hover {
                     background-color: var(--dropdown-item-hover);
                     color: var(--primary-color);
+                    border-left-color: var(--primary-color);
+                }
+                .contact-dropdown-item {
+                    margin-top: 10px;
                 }
 
 
-                /* --- Tablet and Larger Screens --- */
+                /* --- Tablet and Larger Screens (@media (min-width: 768px)) --- */
                 @media (min-width: 768px) {
                     .header-container {
-                        flex-direction: row; /* Horizontal layout on larger screens */
+                        flex-direction: row;
                         justify-content: space-between;
-                        padding: 15px 40px;
-                        min-height: 70px;
-                        gap: 20px; /* Adjust gap between sections for larger screens */
+                        padding: 18px 45px;
+                        min-height: 80px;
+                        gap: 25px;
+                        flex-wrap: nowrap;
+                        box-shadow: 0 5px 25px rgba(0,0,0,0.4);
+                        width: 100%;
                     }
-
                     .logo-section {
-                        font-size: 28px;
+                        font-size: 30px;
                         letter-spacing: 4px;
-                        gap: 10px;
+                        gap: 12px;
+                        flex-shrink: 0;
                     }
                     .logo-icon {
-                        font-size: 40px;
+                        font-size: 42px;
                     }
-
                     .nav-links-section {
-                        flex-wrap: nowrap; /* Prevent wrapping on desktop */
+                        flex-wrap: nowrap;
                         justify-content: center;
-                        margin: 0 20px; /* Horizontal margin */
-                        gap: 24px; /* More space between nav items */
-                        overflow-x: visible; /* Allow content to be visible (no hidden scrollbar) */
+                        margin: 0 auto;
+                        gap: 35px; /* Increased gap for desktop nav items */
+                        overflow-x: visible;
+                        padding-bottom: 0;
+                        border-bottom: none;
+                        flex-grow: 1;
+                        min-width: 0;
+                        flex-basis: auto;
                     }
                     .nav-link-item {
-                        padding: 10px 16px;
-                        font-size: 15px;
-                        gap: 8px;
+                        padding: 10px 15px; /* Adjusted padding for desktop */
+                        font-size: 15px; /* Slightly smaller font for more items to fit */
+                        gap: 6px; /* Slightly more gap between icon and text */
+                        border-radius: 10px;
+                        flex-shrink: 0;
+                    }
+                    .nav-link-item.active {
+                        box-shadow: none; /* No box-shadow on active state on desktop */
+                    }
+                    .nav-link-item.active::after {
+                        height: 4px;
+                    }
+                    .nav-link-item:hover {
+                        transform: translateY(-3px); /* Subtle lift on hover */
+                    }
+                    .nav-link-item.active:hover {
+                        transform: translateY(0);
                     }
                     .nav-link-icon {
-                        font-size: 18px;
+                        font-size: 18px; /* Adjusted icon size for desktop */
                     }
-
                     .user-action-section {
-                        margin-top: 0; /* Remove top margin */
-                        width: auto; /* Revert to auto width */
-                        justify-content: flex-end; /* Align to the right */
-                        font-size: 14px;
-                        gap: 15px;
-                        margin-left: auto; /* Pushes this section to the far right */
+                        margin-top: 0;
+                        width: auto;
+                        justify-content: flex-end;
+                        font-size: 15px;
+                        gap: 20px;
+                        margin-left: auto;
+                        flex-shrink: 0;
                     }
-
                     .instagram-link {
-                        font-size: 22px;
-                        text-shadow: 0 0 8px var(--instagram-color);
-                    }
-
-                    .user-email {
-                        max-width: 140px; /* More space for email on desktop */
-                    }
-
-                    .profile-toggle-button {
-                        padding: 8px 20px;
-                        border-radius: 30px;
-                        min-width: 120px;
-                    }
-                    .profile-icon {
-                        font-size: 20px;
+                        font-size: 24px;
+                        text-shadow: 0 0 10px var(--instagram-color);
                     }
                     .user-email-display {
-                        max-width: 100px; /* More space for email on desktop button */
+                        max-width: 150px;
                     }
-
+                    .auth-button {
+                        padding: 10px 25px;
+                        border-radius: 30px;
+                        min-width: 160px;
+                    }
+                    .profile-icon {
+                        font-size: 22px;
+                    }
                     .profile-dropdown-menu {
-                        right: 0; /* Keep aligned to right for desktop */
-                        left: auto; /* Override potential left setting from mobile centering */
+                        right: 0;
+                        left: auto;
+                        min-width: 280px;
+                        padding: 12px 0;
                     }
-                }
-
-                /* --- Larger Desktop Screens (e.g., 1024px and above) --- */
-                @media (min-width: 1024px) {
-                    .nav-links-section {
-                        gap: 30px; /* Even more space for wide screens */
+                    .dropdown-header {
+                        padding: 15px 20px;
+                        font-size: 16px;
+                        margin-bottom: 15px;
+                    }
+                    .dropdown-item {
+                        padding: 10px 20px;
+                        font-size: 15px;
+                    }
+                    .dropdown-section-title {
+                        padding: 12px 20px 8px;
+                        font-size: 14px;
+                        margin-top: 15px;
                     }
                 }
                 `}
