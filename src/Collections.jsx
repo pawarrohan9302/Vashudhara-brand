@@ -1,10 +1,9 @@
-// src/Collections.jsx
 import React, { useEffect, useState } from "react";
 import { database } from "./firebase"; // Ensure 'database' is exported from firebase.js
-import { ref, onValue, push, update } from "firebase/database";
+import { ref, onValue, push, update, set } from "firebase/database"; // Added 'set'
 import loadScript from "./loadRazorpayScript"; // Import the helper function
 
-const Collections = () => { // Changed from CategoryPage to Collections
+const Collections = () => {
     const [products, setProducts] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [quantity, setQuantity] = useState(1);
@@ -15,8 +14,11 @@ const Collections = () => { // Changed from CategoryPage to Collections
     const [stateName, setStateName] = useState("");
     const [district, setDistrict] = useState("");
     const [village, setVillage] = useState("");
+    const [customerEmail, setCustomerEmail] = useState(""); // Added customerEmail state
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [loadingPincode, setLoadingPincode] = useState(false); // State for pincode loading
+    const [pincodeError, setPincodeError] = useState(''); // State for pincode error
 
     // IMPORTANT: Replace with your actual Razorpay Test Key ID
     // NEVER expose your Key Secret in client-side code for a production app!
@@ -25,9 +27,6 @@ const Collections = () => { // Changed from CategoryPage to Collections
     useEffect(() => {
         setIsLoading(true);
         const productsRef = ref(database, "products");
-        // For Collections page, you might fetch all products or a specific subset
-        // If you want to filter by a default category, you'd add query here.
-        // For now, let's fetch all products to show the collection.
         const unsubscribe = onValue(productsRef, (snapshot) => {
             const data = snapshot.val();
             const productArray = data ? Object.entries(data).map(([id, value]) => ({ id, ...value })) : [];
@@ -38,13 +37,48 @@ const Collections = () => { // Changed from CategoryPage to Collections
             setIsLoading(false);
         });
 
-        // Cleanup function for useEffect
         return () => unsubscribe();
-    }, []); // Empty dependency array means this runs once on mount
+    }, []);
+
+    // Function to fetch pincode details
+    const fetchPincodeDetails = async () => {
+        if (pinCode.length !== 6) {
+            setPincodeError('Pincode must be 6 digits.');
+            return;
+        }
+
+        setLoadingPincode(true);
+        setPincodeError('');
+        // No need to clear stateName, district, village here as they can be manually overridden
+
+        try {
+            const response = await fetch(`https://api.postalpincode.in/pincode/${pinCode}`);
+            const data = await response.json();
+
+            if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+                const postOffice = data[0].PostOffice[0];
+                setStateName(postOffice.State);
+                setDistrict(postOffice.District);
+                // setVillage(postOffice.Name); // Uncomment if you want to auto-fill village/post office name
+            } else {
+                setPincodeError('Invalid or unserviceable pincode. Please enter manually.');
+                // Clear auto-filled fields if pincode is invalid/unserviceable for user to manually enter
+                setStateName('');
+                setDistrict('');
+            }
+        } catch (error) {
+            console.error("Error fetching pincode details:", error);
+            setPincodeError('Failed to fetch pincode details. Please enter manually.');
+            // Clear auto-filled fields on error for user to manually enter
+            setStateName('');
+            setDistrict('');
+        } finally {
+            setLoadingPincode(false);
+        }
+    };
 
     const handleBuyClick = (product) => {
         setSelectedProduct(product);
-        // Reset form fields when a new product is selected
         setQuantity(1);
         setSize("M");
         setFullName("");
@@ -53,29 +87,41 @@ const Collections = () => { // Changed from CategoryPage to Collections
         setStateName("");
         setDistrict("");
         setVillage("");
+        setCustomerEmail(""); // Reset customer email
+        setPincodeError(''); // Clear any previous pincode error
     };
 
     const handleCreateOrder = async () => {
+        setIsSubmitting(true);
+
         // --- Form Validation ---
-        if (!fullName || !surname || !pinCode || !stateName || !district || !village) {
-            alert("Please fill all required address fields.");
-            setIsSubmitting(false); // Ensure button is re-enabled if validation fails
+        if (!fullName.trim() || !surname.trim() || !pinCode.trim() || !stateName.trim() || !district.trim() || !village.trim() || !customerEmail.trim()) {
+            alert("Please fill all required address fields, including your email.");
+            setIsSubmitting(false);
             return;
         }
 
-        if (!/^\d{6}$/.test(pinCode)) {
+        if (!/^\d{6}$/.test(pinCode.trim())) {
             alert("Please enter a valid 6-digit PIN code.");
-            setIsSubmitting(false); // Ensure button is re-enabled if validation fails
+            setIsSubmitting(false);
             return;
         }
 
         if (!selectedProduct) {
             alert("No product selected for purchase.");
-            setIsSubmitting(false); // Ensure button is re-enabled if validation fails
+            setIsSubmitting(false);
             return;
         }
-
-        setIsSubmitting(true); // Disable the button while processing
+        if (quantity <= 0) {
+            alert("Quantity must be at least 1.");
+            setIsSubmitting(false);
+            return;
+        }
+        if (!size) {
+            alert("Please select a size for the product.");
+            setIsSubmitting(false);
+            return;
+        }
 
         const itemPrice = parseFloat(selectedProduct.price);
         if (isNaN(itemPrice) || itemPrice <= 0) {
@@ -83,33 +129,38 @@ const Collections = () => { // Changed from CategoryPage to Collections
             setIsSubmitting(false);
             return;
         }
-        const amount = itemPrice * quantity; // Total amount in INR
-        const razorpayAmountInPaisa = Math.round(amount * 100); // Razorpay expects amount in paisa (integer)
+        const amount = itemPrice * quantity;
+        const razorpayAmountInPaisa = Math.round(amount * 100);
 
-        let firebaseOrderId = null; // Variable to store the Firebase order ID
+        let firebaseOrderId = null;
 
         try {
             // Step 1: Save the order to Firebase with 'Payment Pending' status
             const ordersRef = ref(database, "orders");
-            const newOrderRef = await push(ordersRef, {
+            const newOrderRef = push(ordersRef); // Use push to get a new ref
+            firebaseOrderId = newOrderRef.key; // Get the unique key generated by push
+
+            await set(newOrderRef, { // Use set to write data at the new ref
+                id: firebaseOrderId, // Store the ID within the order data
                 productId: selectedProduct.id,
                 productTitle: selectedProduct.title,
                 productImage: selectedProduct.image,
                 pricePerItem: selectedProduct.price,
                 quantity: quantity,
                 size: size,
-                customerName: fullName,
-                customerSurname: surname,
-                pinCode: pinCode,
-                state: stateName,
-                district: district,
-                village: village,
+                customerName: fullName.trim(),
+                customerSurname: surname.trim(),
+                customerEmail: customerEmail.trim(), // Save customer email
+                pinCode: pinCode.trim(),
+                state: stateName.trim(),
+                district: district.trim(),
+                village: village.trim(),
                 totalAmount: amount,
                 orderDate: new Date().toISOString(),
-                status: "Payment Pending", // Initial status
+                status: "Payment Pending",
                 paymentMethod: "Razorpay",
+                trackingUpdates: [], // Initialize tracking updates
             });
-            firebaseOrderId = newOrderRef.key; // Get the unique ID generated by Firebase
             console.log("Order saved to Firebase with ID:", firebaseOrderId);
 
             // Step 2: Load the Razorpay SDK script dynamically
@@ -118,7 +169,6 @@ const Collections = () => { // Changed from CategoryPage to Collections
             if (!res) {
                 alert("Razorpay SDK failed to load. Please check your internet connection.");
                 setIsSubmitting(false);
-                // Update Firebase order status if SDK fails to load
                 if (firebaseOrderId) {
                     await update(ref(database, `orders/${firebaseOrderId}`), {
                         status: "Payment Initiation Failed (SDK Load)",
@@ -129,25 +179,22 @@ const Collections = () => { // Changed from CategoryPage to Collections
 
             // Step 3: Configure Razorpay payment options
             const options = {
-                key: RAZORPAY_KEY_ID, // Your Razorpay Key ID
-                amount: razorpayAmountInPaisa, // Amount in paisa
+                key: RAZORPAY_KEY_ID,
+                amount: razorpayAmountInPaisa,
                 currency: "INR",
-                name: "Vashudhara Store", // Your store name
+                name: "Vashudhara Store",
                 description: `Order for ${selectedProduct.title}`,
-                image: "https://example.com/your_logo.png", // Replace with your store's logo URL
-                // The 'order_id' is not passed here directly as we are not pre-creating
-                // an order on the Razorpay server using a Cloud Function.
-                // Razorpay can handle direct payment capture.
-                notes: { // Custom notes to associate with the payment
-                    firebaseOrderId: firebaseOrderId, // Pass your Firebase order ID
+                image: "https://via.placeholder.com/100x100?text=Shop+Logo", // Replace with your actual shop logo
+                notes: {
+                    firebaseOrderId: firebaseOrderId,
                     productTitle: selectedProduct.title,
-                    customerName: `${fullName} ${surname}`,
-                    pinCode: pinCode,
-                    address: `${village}, ${district}, ${stateName} - ${pinCode}`,
+                    customerName: `${fullName.trim()} ${surname.trim()}`,
+                    customerEmail: customerEmail.trim(), // Pass customer email to Razorpay notes
+                    pinCode: pinCode.trim(),
+                    address: `${village.trim()}, ${district.trim()}, ${stateName.trim()} - ${pinCode.trim()}`,
                     product_id: selectedProduct.id,
                 },
                 handler: async function (response) {
-                    // This function is called on successful payment
                     console.log("Payment successful:", response);
                     alert("Payment successful! Your order has been placed.");
 
@@ -156,9 +203,9 @@ const Collections = () => { // Changed from CategoryPage to Collections
                         try {
                             await update(ref(database, `orders/${firebaseOrderId}`), {
                                 status: "Payment Successful",
-                                razorpayPaymentId: response.razorpay_payment_id,
-                                razorpayOrderId: response.razorpay_order_id, // This will be generated by Razorpay during payment
-                                razorpaySignature: response.razorpay_signature,
+                                razorpayPaymentId: response.razorpay_payment_id || null,
+                                razorpayOrderId: response.razorpay_order_id || null,
+                                razorpaySignature: response.razorpay_signature || null,
                             });
                             console.log("Order status updated in Firebase.");
                         } catch (updateError) {
@@ -167,23 +214,32 @@ const Collections = () => { // Changed from CategoryPage to Collections
                         }
                     }
 
-                    setSelectedProduct(null); // Close the modal
-                    setIsSubmitting(false); // Re-enable the button
+                    // Reset form fields
+                    setSelectedProduct(null);
+                    setQuantity(1);
+                    setSize("M");
+                    setFullName("");
+                    setSurname("");
+                    setPinCode("");
+                    setStateName("");
+                    setDistrict("");
+                    setVillage("");
+                    setCustomerEmail("");
+                    setPincodeError('');
+                    setIsSubmitting(false);
                 },
-                prefill: { // Pre-fill customer details in the Razorpay checkout
-                    name: `${fullName} ${surname}`,
-                    email: "customer@example.com", // Use actual customer email if available
-                    contact: "9999999999", // Use actual customer contact if available
+                prefill: {
+                    name: `${fullName.trim()} ${surname.trim()}`,
+                    email: customerEmail.trim(), // Use actual customer email
+                    contact: "9999999999", // Consider making this dynamic based on user input if you collect phone number
                 },
-                theme: { // Customize the theme of the Razorpay checkout
+                theme: {
                     color: "#3399cc",
                 },
                 modal: {
                     ondismiss: async function () {
-                        // This function is called when the user dismisses the payment modal
                         console.log('Payment dismissed by user.');
                         alert("Payment was cancelled or failed. Please try again.");
-                        // Update Firebase order status to 'Payment Cancelled'
                         if (firebaseOrderId) {
                             try {
                                 await update(ref(database, `orders/${firebaseOrderId}`), {
@@ -194,7 +250,7 @@ const Collections = () => { // Changed from CategoryPage to Collections
                                 console.error("Error updating order status on dismiss:", updateError);
                             }
                         }
-                        setIsSubmitting(false); // Re-enable the button
+                        setIsSubmitting(false);
                     }
                 }
             };
@@ -207,18 +263,17 @@ const Collections = () => { // Changed from CategoryPage to Collections
             console.error("Error during payment initiation:", error);
             alert(`An error occurred: ${error.message || "Please try again."}`);
 
-            // Update Firebase order status to 'Payment Initiation Failed' if an error occurs
             if (firebaseOrderId) {
                 try {
                     await update(ref(database, `orders/${firebaseOrderId}`), {
                         status: "Payment Initiation Failed (Client-side Error)",
-                        errorMessage: error.message,
+                        errorMessage: error.message || null,
                     });
                 } catch (updateErr) {
                     console.error("Failed to update status after initiation error:", updateErr);
                 }
             }
-            setIsSubmitting(false); // Re-enable the button
+            setIsSubmitting(false);
         }
     };
 
@@ -285,11 +340,11 @@ const Collections = () => { // Changed from CategoryPage to Collections
             {selectedProduct && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-5"
-                    onClick={() => !isSubmitting && setSelectedProduct(null)} // Close modal if clicking outside, but not while submitting
+                    onClick={() => !isSubmitting && setSelectedProduct(null)}
                 >
                     <div
                         className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md text-white p-6 flex flex-col max-h-[90vh] overflow-y-auto"
-                        onClick={(e) => e.stopPropagation()} // Prevent modal from closing when clicking inside
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <h2 className="text-3xl font-bold mb-5 text-center text-emerald-300">
                             Buy {selectedProduct.title}
@@ -311,6 +366,7 @@ const Collections = () => { // Changed from CategoryPage to Collections
                                     value={quantity}
                                     onChange={(e) => setQuantity(Number(e.target.value))}
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    required
                                 />
                             </div>
                             <div>
@@ -320,34 +376,52 @@ const Collections = () => { // Changed from CategoryPage to Collections
                                     value={size}
                                     onChange={(e) => setSize(e.target.value)}
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    required
                                 >
                                     <option value="S">Small</option>
                                     <option value="M">Medium</option>
                                     <option value="L">Large</option>
                                     <option value="XL">XL</option>
+                                    {selectedProduct.sizes && selectedProduct.sizes.map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                             <div>
-                                <label htmlFor="fullName" className="block text-sm font-semibold mb-1 text-gray-300">Full Name:</label>
+                                <label htmlFor="fullName" className="block text-sm font-semibold mb-1 text-gray-300">First Name:</label>
                                 <input
                                     id="fullName"
                                     type="text"
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    required
                                 />
                             </div>
                             <div>
-                                <label htmlFor="surname" className="block text-sm font-semibold mb-1 text-gray-300">Surname:</label>
+                                <label htmlFor="surname" className="block text-sm font-semibold mb-1 text-gray-300">Last Name:</label>
                                 <input
                                     id="surname"
                                     type="text"
                                     value={surname}
                                     onChange={(e) => setSurname(e.target.value)}
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="customerEmail" className="block text-sm font-semibold mb-1 text-gray-300">Email:</label>
+                                <input
+                                    id="customerEmail"
+                                    type="email"
+                                    value={customerEmail}
+                                    onChange={(e) => setCustomerEmail(e.target.value)}
+                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    required
+                                    placeholder="yourname@example.com"
                                 />
                             </div>
                             <div>
@@ -357,9 +431,13 @@ const Collections = () => { // Changed from CategoryPage to Collections
                                     type="text"
                                     value={pinCode}
                                     onChange={(e) => setPinCode(e.target.value)}
+                                    onBlur={fetchPincodeDetails}
                                     maxLength={6}
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    required
                                 />
+                                {loadingPincode && <p className="text-sm text-blue-400 mt-1">Fetching address details...</p>}
+                                {pincodeError && <p className="text-sm text-red-400 mt-1">{pincodeError}</p>}
                             </div>
                             <div>
                                 <label htmlFor="stateName" className="block text-sm font-semibold mb-1 text-gray-300">State:</label>
@@ -369,6 +447,7 @@ const Collections = () => { // Changed from CategoryPage to Collections
                                     value={stateName}
                                     onChange={(e) => setStateName(e.target.value)}
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    required
                                 />
                             </div>
                             <div>
@@ -379,6 +458,7 @@ const Collections = () => { // Changed from CategoryPage to Collections
                                     value={district}
                                     onChange={(e) => setDistrict(e.target.value)}
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    required
                                 />
                             </div>
                             <div>
@@ -389,6 +469,7 @@ const Collections = () => { // Changed from CategoryPage to Collections
                                     value={village}
                                     onChange={(e) => setVillage(e.target.value)}
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    required
                                 />
                             </div>
                         </div>
@@ -399,15 +480,15 @@ const Collections = () => { // Changed from CategoryPage to Collections
 
                         <button
                             onClick={handleCreateOrder}
-                            className="bg-green-500 text-black py-3 rounded-full text-lg font-semibold mb-3 hover:bg-green-600 transition-colors duration-200"
-                            disabled={isSubmitting} // Disable button during submission
+                            className="bg-green-500 text-black py-3 rounded-full text-lg font-semibold mb-3 hover:bg-green-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isSubmitting || loadingPincode}
                         >
                             {isSubmitting ? "Processing Payment..." : "Confirm Purchase & Pay"}
                         </button>
                         <button
                             onClick={() => setSelectedProduct(null)}
-                            className="bg-red-500 text-white py-3 rounded-full text-lg font-semibold hover:bg-red-600 transition-colors duration-200"
-                            disabled={isSubmitting} // Disable cancel button during submission
+                            className="bg-red-500 text-white py-3 rounded-full text-lg font-semibold hover:bg-red-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isSubmitting}
                         >
                             Cancel
                         </button>

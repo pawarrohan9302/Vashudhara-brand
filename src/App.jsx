@@ -8,12 +8,14 @@ import Home from "./Home";
 import Cart from "./Cart";
 import About from "./About";
 import Contact from "./Contact";
-import Collections from "./Collections"; // This now handles category-based product display and purchase
-import CategoryPage from "./CategoryPage"; // You might consider if this is still needed if Collections covers its functionality
+import Collections from "./Collections";
+import CategoryPage from "./CategoryPage"; // Still used for specific category display
 import Admin from "./Admin";
 import Login from "./Login";
 import Register from "./Register";
 import ForgotPassword from "./ForgotPassword";
+
+// Protected Components
 import ProfileForm from "./ProfileForm";
 import Payment from "./Payment";
 import Orders from "./Orders";
@@ -25,9 +27,10 @@ import Wallets from "./Wallets";
 import Addresses from "./Addresses";
 import Overview from "./Overview";
 import VashudhraCredit from "./VashudhraCredit";
-
-// Import for Customer Order View
 import CustomerOrderView from "./CustomerOrderView";
+
+// Import the new PrivateRoute component
+import PrivateRoute from "./PrivateRoute"; // Assuming PrivateRoute is directly in src/
 
 const App = () => (
   <Router>
@@ -38,34 +41,36 @@ const App = () => (
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
 
-      {/* Collections component, now with dynamic category fetching and Razorpay */}
       <Route path="/collections" element={<Collections />} />
 
-      {/* These routes now point to CategoryPage, but if Collections handles it, 
-          you might simplify or adjust CategoryPage accordingly.
-          For now, keeping them as is based on previous App.jsx structure. */}
+      {/* Category-specific pages - also typically need login for purchase features */}
       <Route path="/mens-wear" element={<CategoryPage category="mens-wear" />} />
       <Route path="/womens-wear" element={<CategoryPage category="womens-wear" />} />
       <Route path="/accessories" element={<CategoryPage category="accessories" />} />
 
-      <Route path="/admin" element={<Admin />} />
+      <Route path="/admin" element={<Admin />} /> {/* Admin route might need its own specific admin protection */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/profile" element={<ProfileForm />} />
-      <Route path="/payment" element={<Payment />} />
-      <Route path="/orders" element={<Orders />} />
-      <Route path="/profile-details" element={<Profile />} />
-      <Route path="/coupons" element={<Coupons />} />
-      <Route path="/saved-cards" element={<SavedCards />} />
-      <Route path="/saved-upi" element={<SavedUPI />} />
-      <Route path="/wallets" element={<Wallets />} />
-      <Route path="/addresses" element={<Addresses />} />
-      <Route path="/overview" element={<Overview />} />
-      <Route path="/vashudhra-credit" element={<VashudhraCredit />} />
 
-      {/* Route for Customer Order View */}
-      <Route path="/customerorderview" element={<CustomerOrderView />} />
+      {/* --- Protected Routes --- */}
+      {/* All routes nested inside PrivateRoute will only be accessible if logged in */}
+      <Route path="/" element={<PrivateRoute />}>
+        <Route path="/profile" element={<ProfileForm />} />
+        <Route path="/payment" element={<Payment />} />
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/profile-details" element={<Profile />} />
+        <Route path="/coupons" element={<Coupons />} />
+        <Route path="/saved-cards" element={<SavedCards />} />
+        <Route path="/saved-upi" element={<SavedUPI />} />
+        <Route path="/wallets" element={<Wallets />} />
+        <Route path="/addresses" element={<Addresses />} />
+        <Route path="/overview" element={<Overview />} />
+        <Route path="/vashudhra-credit" element={<VashudhraCredit />} />
+        <Route path="/customerorderview" element={<CustomerOrderView />} />
+      </Route>
+      {/* --- End Protected Routes --- */}
+
     </Routes>
   </Router>
 );
