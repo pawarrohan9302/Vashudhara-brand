@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { auth } from "./firebase";
+import { auth } from "./firebase"; // Assuming './firebase' is correct for Firebase Auth
 
 import {
     FaLeaf,
@@ -23,6 +23,7 @@ const Header = () => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const profileRef = useRef(null);
 
+    // Effect for Firebase Auth State Changed
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((currentUser) => {
             console.log("Firebase Auth State Changed. Current User:", currentUser ? currentUser.email : "No user logged in");
@@ -31,6 +32,7 @@ const Header = () => {
         return () => unsubscribe();
     }, []);
 
+    // Effect for handling clicks outside the profile dropdown
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -48,7 +50,7 @@ const Header = () => {
             await auth.signOut();
             setUser(null);
             setShowProfileMenu(false);
-            navigate("/");
+            navigate("/"); // Redirect to home after logout
             console.log("User logged out successfully.");
         } catch (error) {
             console.error("Error logging out:", error.message);
@@ -125,7 +127,7 @@ const Header = () => {
                         <FaUserCircle className="profile-icon" />
                         <span className="profile-text">
                             {user ? (
-                                <span className="user-email-display">{user.email}</span>
+                                <span className="user-email-display">{user.email.split('@')[0]}</span>
                             ) : (
                                 "Profile"
                             )}
@@ -152,18 +154,22 @@ const Header = () => {
                             <Link to="/orders" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Orders</Link>
                             <Link to="/wishlist" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Wishlist</Link>
                             <Link to="/gift-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Gift Cards</Link>
+
                             <div className="dropdown-section-title">Vashudhara Insider <span className="new-badge">New</span></div>
-                            <Link to="/vashudhara-credit" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Vashudhara Credit</Link>
+                            {/* REMOVED: <Link to="/vashudhara-credit" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Vashudhara Credit</Link> */}
                             <Link to="/coupons" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Coupons</Link>
                             <Link to="/saved-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved Cards</Link>
-                            <Link to="/saved-vpa" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved VPA</Link>
-                            <Link to="/saved-addresses" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved Addresses</Link>
+                            {/* REMOVED: <Link to="/saved-vpa" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved VPA</Link> */}
+                            {/* Note: I'm assuming 'Saved Addresses' corresponds to your '/addresses' route in App.jsx.
+                                If not, adjust 'to' prop accordingly. If you want to remove this too, let me know. */}
+                            <Link to="/addresses" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved Addresses</Link>
                             <Link to="/contact" onClick={() => setShowProfileMenu(false)} className="dropdown-item contact-dropdown-item" role="menuitem">Contact Us</Link>
                         </div>
                     )}
                 </div>
             </div>
 
+            {/* Inline CSS - remains as provided by you */}
             <style>
                 {`
                 /* CSS Variables for easy theme management */
@@ -602,4 +608,4 @@ const Header = () => {
     );
 };
 
-export default Header;  
+export default Header;
