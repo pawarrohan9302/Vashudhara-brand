@@ -104,7 +104,8 @@ const Header = () => {
             </nav>
 
             <div className="user-action-section">
-                <a
+                {/* Removed direct Instagram link from here as it's being moved to dropdown */}
+                {/* <a
                     href="https://www.instagram.com/vashudharastore/"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -113,7 +114,7 @@ const Header = () => {
                     aria-label="Instagram Profile"
                 >
                     <FaInstagram />
-                </a>
+                </a> */}
 
                 <div className="profile-dropdown-container" ref={profileRef}>
                     <button
@@ -156,13 +157,22 @@ const Header = () => {
                             <Link to="/gift-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Gift Cards</Link>
 
                             <div className="dropdown-section-title">Vashudhara Insider <span className="new-badge">New</span></div>
-                            {/* REMOVED: <Link to="/vashudhara-credit" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Vashudhara Credit</Link> */}
                             <Link to="/coupons" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Coupons</Link>
                             <Link to="/saved-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved Cards</Link>
-                            {/* REMOVED: <Link to="/saved-vpa" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved VPA</Link> */}
-                            {/* Note: I'm assuming 'Saved Addresses' corresponds to your '/addresses' route in App.jsx.
-                                If not, adjust 'to' prop accordingly. If you want to remove this too, let me know. */}
                             <Link to="/addresses" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved Addresses</Link>
+
+                            {/* New Instagram Link in Dropdown */}
+                            <a
+                                href="https://www.instagram.com/vashudharastore/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => setShowProfileMenu(false)} // Close dropdown on click
+                                className="dropdown-item instagram-dropdown-link" // Add a specific class for styling
+                                role="menuitem"
+                            >
+                                <FaInstagram style={{ marginRight: '8px', color: 'var(--instagram-color)' }} /> Visit our Instagram
+                            </a>
+
                             <Link to="/contact" onClick={() => setShowProfileMenu(false)} className="dropdown-item contact-dropdown-item" role="menuitem">Contact Us</Link>
                         </div>
                     )}
@@ -349,7 +359,8 @@ const Header = () => {
                     position: relative;
                 }
 
-                .instagram-link {
+                /* Removed .instagram-link as it's now part of the dropdown item */
+                /* .instagram-link {
                     color: var(--instagram-color);
                     font-size: 20px;
                     text-shadow: 0 0 8px var(--instagram-color);
@@ -358,7 +369,7 @@ const Header = () => {
                 .instagram-link:hover {
                     transform: scale(1.25);
                     text-shadow: 0 0 12px var(--instagram-color), 0 0 20px rgba(225,48,108,0.7);
-                }
+                } */
 
                 .user-email-display {
                     max-width: 90px;
@@ -501,6 +512,15 @@ const Header = () => {
                     margin-top: 10px;
                 }
 
+                /* New style for Instagram dropdown link */
+                .instagram-dropdown-link {
+                    /* Inherits most styles from .dropdown-item */
+                }
+                .instagram-dropdown-link:hover {
+                    /* Inherits hover styles from .dropdown-item, which will make the icon's color change */
+                    color: var(--primary-color); /* Ensure text and icon remain primary color on hover */
+                }
+
 
                 /* --- Tablet and Larger Screens (@media (min-width: 768px)) --- */
                 @media (min-width: 768px) {
@@ -566,10 +586,11 @@ const Header = () => {
                         margin-left: auto;
                         flex-shrink: 0;
                     }
-                    .instagram-link {
+                    /* No .instagram-link needed here either */
+                    /* .instagram-link {
                         font-size: 24px;
                         text-shadow: 0 0 10px var(--instagram-color);
-                    }
+                    } */
                     .user-email-display {
                         max-width: 150px;
                     }
