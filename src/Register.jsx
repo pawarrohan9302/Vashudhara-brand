@@ -1,111 +1,59 @@
-import React, { useState, useEffect } from "react";
-import { auth } from "./firebase";
-import {
-    sendSignInLinkToEmail,
-    isSignInWithEmailLink,
-    signInWithEmailLink,
-    updatePassword,
-    createUserWithEmailAndPassword,
-    signOut,
-} from "firebase/auth";
+// src/Register.js
+import React, { useState } from "react";
+import { auth } from "./firebase"; // Relative path
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useNavigate, Link } from "react-router-dom";
-
-const actionCodeSettings = {
-    url: window.location.origin + "/register", // Same page for handling link
-    handleCodeInApp: true,
-};
 
 const Register = () => {
     const navigate = useNavigate();
-
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [message, setMessage] = useState("");
     const [error, setError] = useState("");
-    const [isVerifying, setIsVerifying] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState("");
 
-    // On mount, check if this is email sign-in link
-    useEffect(() => {
-        if (isSignInWithEmailLink(auth, window.location.href)) {
-            let storedEmail = window.localStorage.getItem("emailForRegistration");
-
-            if (!storedEmail) {
-                storedEmail = window.prompt("Please provide your email for confirmation");
-            }
-
-            setIsVerifying(true);
-            signInWithEmailLink(auth, storedEmail, window.location.href)
-                .then((result) => {
-                    window.localStorage.removeItem("emailForRegistration");
-                    setMessage("Email verified! Now set your password.");
-                    setIsVerifying(false);
-                    setEmail(storedEmail);
-                })
-                .catch((err) => {
-                    setError("Invalid or expired link. Please register again.");
-                    setIsVerifying(false);
-                });
-        }
-    }, []);
-
-    const handleSendLink = async (e) => {
+    const handleRegister = async (e) => {
         e.preventDefault();
         setError("");
         setMessage("");
 
         if (password !== confirmPassword) {
-            setError("Passwords do not match.");
-            return;
+            return setError("Passwords do not match.");
         }
         if (password.length < 6) {
-            setError("Password should be at least 6 characters.");
-            return;
+            return setError("Password should be at least 6 characters.");
         }
 
+        setLoading(true);
         try {
-            // Store email locally to confirm on link click
-            window.localStorage.setItem("emailForRegistration", email);
-
-            await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-            setMessage(
-                `Verification link sent to ${email}. Please check your inbox and click the link to verify your email.`
-            );
+            await createUserWithEmailAndPassword(auth, email, password);
+            setMessage("Registration successful! You can now log in.");
+            setEmail("");
             setPassword("");
             setConfirmPassword("");
-        } catch (err) {
-            setError(err.message);
-        }
-    };
-
-    // After email verified, user sets password
-    const handleSetPassword = async (e) => {
-        e.preventDefault();
-        setError("");
-        setMessage("");
-
-        if (password !== confirmPassword) {
-            setError("Passwords do not match.");
-            return;
-        }
-        if (password.length < 6) {
-            setError("Password should be at least 6 characters.");
-            return;
-        }
-
-        try {
-            // Update password for current user
-            if (auth.currentUser) {
-                await updatePassword(auth.currentUser, password);
-                setMessage("Password set successfully! You can now login.");
-                // Optionally logout user after setting password
-                await signOut(auth);
+            setTimeout(() => {
                 navigate("/login");
-            } else {
-                setError("User not signed in properly.");
-            }
+            }, 2000); // Redirect to login after 2 seconds
         } catch (err) {
-            setError(err.message);
+            console.error("Registration error:", err);
+            // More user-friendly error messages based on Firebase error codes
+            switch (err.code) {
+                case "auth/email-already-in-use":
+                    setError("This email is already registered.");
+                    break;
+                case "auth/invalid-email":
+                    setError("Invalid email address.");
+                    break;
+                case "auth/weak-password":
+                    setError("Password is too weak. Please choose a stronger one.");
+                    break;
+                default:
+                    setError("Failed to register: " + err.message);
+                    break;
+            }
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -119,78 +67,48 @@ const Register = () => {
                 {error && <p className="mb-4 text-red-600 text-center">{error}</p>}
                 {message && <p className="mb-4 text-green-600 text-center">{message}</p>}
 
-                {/* Show email input and send link if not verified yet */}
-                {!auth.currentUser && !isVerifying && (
-                    <form onSubmit={handleSendLink} className="space-y-5">
-                        <input
-                            type="email"
-                            placeholder="Email Address"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
-                            required
-                        />
-                        <input
-                            type="password"
-                            placeholder="Create Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
-                            required
-                        />
-                        <input
-                            type="password"
-                            placeholder="Confirm Password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
-                            required
-                        />
-                        <button
-                            type="submit"
-                            className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-semibold transition"
-                        >
-                            Send Verification Link
-                        </button>
-                        <p className="text-center mt-3 text-gray-600">
-                            Already registered?{" "}
-                            <Link to="/login" className="text-purple-600 font-semibold hover:underline">
-                                Login here
-                            </Link>
-                        </p>
-                    </form>
-                )}
-
-                {/* If email verified, show password set form */}
-                {auth.currentUser && (
-                    <form onSubmit={handleSetPassword} className="space-y-5 mt-6">
-                        <p className="text-center text-gray-700 mb-4">
-                            Set your password for the account {email}
-                        </p>
-                        <input
-                            type="password"
-                            placeholder="Create Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
-                            required
-                        />
-                        <input
-                            type="password"
-                            placeholder="Confirm Password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
-                            required
-                        />
-                        <button
-                            type="submit"
-                            className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-semibold transition"
-                        >
-                            Set Password
-                        </button>
-                    </form>
-                )}
+                <form onSubmit={handleRegister} className="space-y-5">
+                    <input
+                        type="email"
+                        placeholder="Email Address"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        required
+                    />
+                    <input
+                        type="password"
+                        placeholder="Create Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        required
+                    />
+                    <input
+                        type="password"
+                        placeholder="Confirm Password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        required
+                    />
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className={`w-full py-3 rounded-md font-semibold transition ${loading
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-purple-600 hover:bg-purple-700 text-white"
+                            }`}
+                    >
+                        {loading ? "Registering..." : "Register"}
+                    </button>
+                    <p className="text-center mt-3 text-gray-600">
+                        Already have an account?{" "}
+                        <Link to="/login" className="text-purple-600 font-semibold hover:underline">
+                            Login here
+                        </Link>
+                    </p>
+                </form>
             </div>
         </div>
     );
