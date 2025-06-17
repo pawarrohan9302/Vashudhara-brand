@@ -265,8 +265,8 @@ const OrdersList = () => {
         // Shop Details
         doc.setFontSize(10);
         doc.text("Vashudhara Store", 20, 30);
-        doc.text("123, Example Street, City, State - 123456", 20, 35); // Replace with your actual shop address
-        doc.text("Contact: your@shop.com | +91-9876543210", 20, 40); // Replace with your actual contact info
+        doc.text("Makan N-11 Ward no-13 post Bodarli Teh-Burhanpur Dongargoan,Madhya Pradesh", 20, 35); // Replace with your actual shop address
+        doc.text("Contact: your@shop.com | +91-8518909397", 20, 40); // Replace with your actual contact info
 
         // Order Details
         doc.setFontSize(12);

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { database, app } from "./firebase";
+import { database } from "./firebase"; // Assuming 'app' is not directly used here
 import { ref, onValue, query, orderByChild, equalTo, push, update, set } from "firebase/database";
-import { useNavigate } from "react-router-dom"; // Import useNavigate for redirection
-import useAuthStatus from "./hooks/useAuthStatus"; // <-- UPDATED IMPORT PATH
-import loadScript from "./loadRazorpayScript";
+import { useNavigate } from "react-router-dom";
+import useAuthStatus from "./hooks/useAuthStatus"; // Make sure this path is correct
+import loadScript from "./loadRazorpayScript"; // Make sure this path is correct
 
 const CategoryPage = ({ category }) => {
     const { loggedIn, checkingStatus, user } = useAuthStatus(); // Use the auth hook
@@ -15,6 +15,7 @@ const CategoryPage = ({ category }) => {
     const [size, setSize] = useState("M");
 
     // Initialize state variables with logged-in user data if available
+    // These will be further updated by useEffect if user object changes
     const [fullName, setFullName] = useState(user?.displayName?.split(' ')[0] || "");
     const [surname, setSurname] = useState(user?.displayName?.split(' ')[1] || "");
     const [pinCode, setPinCode] = useState("");
@@ -30,7 +31,7 @@ const CategoryPage = ({ category }) => {
 
     const RAZORPAY_KEY_ID = "rzp_test_Wj5c933q6luams"; // Ensure this is your actual test or live key
 
-    // Effect for fetching products
+    // Effect for fetching products based on category
     useEffect(() => {
         setIsLoading(true);
         const productsRef = ref(database, "products");
@@ -57,23 +58,34 @@ const CategoryPage = ({ category }) => {
                 const nameParts = user.displayName.split(' ');
                 setFullName(nameParts[0] || "");
                 setSurname(nameParts[1] || "");
+            } else {
+                // If user is logged in but displayName is null, allow manual entry
+                setFullName("");
+                setSurname("");
             }
         } else {
             // Clear fields if user logs out or is not logged in
             setFullName("");
             setSurname("");
             setCustomerEmail("");
+            setPinCode("");
+            setStateName("");
+            setDistrict("");
+            setVillage("");
         }
     }, [user]);
 
+    // Function to fetch pincode details from external API
     const fetchPincodeDetails = async () => {
-        if (pinCode.length !== 6) {
-            setPincodeError('Pincode must be 6 digits.');
+        if (pinCode.length !== 6 || !/^\d{6}$/.test(pinCode)) {
+            setPincodeError('Pincode must be a valid 6-digit number.');
+            setStateName('');
+            setDistrict('');
             return;
         }
 
         setLoadingPincode(true);
-        setPincodeError('');
+        setPincodeError(''); // Clear previous errors
 
         try {
             const response = await fetch(`https://api.postalpincode.in/pincode/${pinCode}`);
@@ -83,15 +95,16 @@ const CategoryPage = ({ category }) => {
                 const postOffice = data[0].PostOffice[0];
                 setStateName(postOffice.State);
                 setDistrict(postOffice.District);
-                // setVillage(postOffice.Name); // Decided not to auto-fill village/post office name from pincode API
+                // Intentionally NOT auto-filling village as per previous discussion
+                setPincodeError(''); // Clear error if successful
             } else {
-                setPincodeError('Invalid or unserviceable pincode. Please enter manually.');
+                setPincodeError('Invalid or unserviceable pincode. Please enter State and District manually.');
                 setStateName('');
                 setDistrict('');
             }
         } catch (error) {
             console.error("Error fetching pincode details:", error);
-            setPincodeError('Failed to fetch pincode details. Please enter manually.');
+            setPincodeError('Failed to fetch pincode details. Please enter State and District manually.');
             setStateName('');
             setDistrict('');
         } finally {
@@ -99,10 +112,10 @@ const CategoryPage = ({ category }) => {
         }
     };
 
+    // Handler when a product's "Buy" button is clicked
     const handleBuyClick = (product) => {
         // --- Authentication Check ---
         if (checkingStatus) {
-            // Still checking, do nothing or show a temporary message
             alert('Please wait while we check your login status.');
             return;
         }
@@ -116,7 +129,7 @@ const CategoryPage = ({ category }) => {
         setSelectedProduct(product);
         setQuantity(1);
         setSize("M");
-        // Customer fields will be pre-filled by the useEffect based on `user`
+        // Clear address fields for a new order. User data fields remain from useEffect.
         setPinCode("");
         setStateName("");
         setDistrict("");
@@ -124,6 +137,7 @@ const CategoryPage = ({ category }) => {
         setPincodeError('');
     };
 
+    // Handler for initiating the Razorpay order
     const handleCreateOrder = async () => {
         setIsSubmitting(true);
 
@@ -134,9 +148,9 @@ const CategoryPage = ({ category }) => {
             return;
         }
 
-        // Basic validation for manual fields (if not fully pre-filled)
-        if (!fullName.trim() || !surname.trim() || !pinCode.trim() || !stateName.trim() || !district.trim() || !village.trim()) {
-            alert("Please fill all required address fields.");
+        // Basic validation for all required fields
+        if (!fullName.trim() || !surname.trim() || !customerEmail.trim() || !pinCode.trim() || !stateName.trim() || !district.trim() || !village.trim()) {
+            alert("Please fill all required address fields: First Name, Last Name, Email, Pin Code, State, District, and Village.");
             setIsSubmitting(false);
             return;
         }
@@ -172,11 +186,12 @@ const CategoryPage = ({ category }) => {
         const amount = itemPrice * quantity;
         const razorpayAmountInPaisa = Math.round(amount * 100);
 
-        let firebaseOrderId = null;
+        let firebaseOrderId = null; // Variable to store the Firebase order ID
 
         try {
+            // 1. Save order to Firebase with "Payment Pending" status
             const ordersRef = ref(database, "orders");
-            const newOrderRef = push(ordersRef);
+            const newOrderRef = push(ordersRef); // Generates a unique ID
             firebaseOrderId = newOrderRef.key;
 
             await set(newOrderRef, {
@@ -188,26 +203,28 @@ const CategoryPage = ({ category }) => {
                 pricePerItem: selectedProduct.price,
                 quantity: quantity,
                 size: size,
-                customerName: fullName.trim(), // Use state values, which are pre-filled or manually entered
-                customerSurname: surname.trim(), // Use state values
-                customerEmail: customerEmail.trim(), // Use state value
+                customerName: fullName.trim(),
+                customerSurname: surname.trim(),
+                customerEmail: customerEmail.trim(),
                 pinCode: pinCode.trim(),
                 state: stateName.trim(),
                 district: district.trim(),
                 village: village.trim(),
                 totalAmount: amount,
                 orderDate: new Date().toISOString(),
-                status: "Payment Pending",
+                status: "Payment Pending", // Initial status
                 paymentMethod: "Razorpay",
                 trackingUpdates: [],
             });
             console.log("Order saved to Firebase with ID:", firebaseOrderId);
 
+            // 2. Load Razorpay SDK
             const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
 
             if (!res) {
                 alert("Razorpay SDK failed to load. Please check your internet connection.");
                 setIsSubmitting(false);
+                // Update Firebase order status to reflect SDK load failure
                 if (firebaseOrderId) {
                     await update(ref(database, `orders/${firebaseOrderId}`), {
                         status: "Payment Initiation Failed (SDK Load)",
@@ -216,42 +233,46 @@ const CategoryPage = ({ category }) => {
                 return;
             }
 
+            // 3. Configure Razorpay options
             const options = {
                 key: RAZORPAY_KEY_ID,
                 amount: razorpayAmountInPaisa,
                 currency: "INR",
-                name: "Vashudhara Store",
+                name: "Vashudhara Store", // Your shop name
                 description: `Order for ${selectedProduct.title}`,
-                image: "https://via.placeholder.com/100x100?text=Shop+Logo", // Replace with your actual shop logo
+                image: "https://via.placeholder.com/100x100?text=Shop+Logo", // Replace with your actual shop logo URL
                 notes: {
-                    firebaseOrderId: firebaseOrderId,
+                    firebaseOrderId: firebaseOrderId, // Pass Firebase order ID to Razorpay
                     productTitle: selectedProduct.title,
                     customerName: `${fullName.trim()} ${surname.trim()}`,
                     customerEmail: customerEmail.trim(),
                     pinCode: pinCode.trim(),
                     address: `${village.trim()}, ${district.trim()}, ${stateName.trim()} - ${pinCode.trim()}`,
                     product_id: selectedProduct.id,
-                    user_id: user.uid, // Add user ID to Razorpay notes
+                    user_id: user.uid,
                 },
                 handler: async function (response) {
+                    // This function is called on successful payment
                     console.log("Payment successful:", response);
                     alert("Payment successful! Your order has been placed.");
 
                     if (firebaseOrderId) {
                         try {
+                            // Update Firebase order status to "Payment Successful"
                             await update(ref(database, `orders/${firebaseOrderId}`), {
                                 status: "Payment Successful",
                                 razorpayPaymentId: response.razorpay_payment_id,
                                 razorpayOrderId: response.razorpay_order_id,
                                 razorpaySignature: response.razorpay_signature,
                             });
-                            console.log("Order status updated in Firebase.");
+                            console.log("Order status updated in Firebase to Successful.");
                         } catch (updateError) {
-                            console.error("Error updating order status in Firebase:", updateError);
+                            console.error("Error updating order status in Firebase after successful payment:", updateError);
                             alert("Payment successful, but there was an error updating order status in our system. Please contact support with your payment ID: " + response.razorpay_payment_id);
                         }
                     }
 
+                    // Reset form after successful payment
                     setSelectedProduct(null);
                     setQuantity(1);
                     setSize("M");
@@ -259,24 +280,25 @@ const CategoryPage = ({ category }) => {
                     setStateName("");
                     setDistrict("");
                     setVillage("");
-                    // No need to explicitly reset fullName, surname, customerEmail here;
-                    // the useEffect will re-populate them if the user is still logged in.
+                    // fullName, surname, customerEmail will be re-populated by useEffect on 'user' change or stay as is.
                     setIsSubmitting(false);
                 },
                 prefill: {
                     name: `${fullName.trim()} ${surname.trim()}`,
                     email: customerEmail.trim(),
-                    contact: "", // You might want to collect phone number as part of the form
+                    contact: "", // Add a contact number state if you collect it
                 },
                 theme: {
                     color: "#3399cc",
                 },
                 modal: {
                     ondismiss: async function () {
+                        // This function is called if the user closes the Razorpay modal
                         console.log('Payment dismissed by user.');
                         alert("Payment was cancelled or failed. Please try again.");
                         if (firebaseOrderId) {
                             try {
+                                // Update Firebase order status to "Payment Cancelled"
                                 await update(ref(database, `orders/${firebaseOrderId}`), {
                                     status: "Payment Cancelled By User",
                                 });
@@ -290,6 +312,7 @@ const CategoryPage = ({ category }) => {
                 }
             };
 
+            // 4. Open Razorpay payment gateway
             const paymentObject = new window.Razorpay(options);
             paymentObject.open();
 
@@ -297,6 +320,7 @@ const CategoryPage = ({ category }) => {
             console.error("Error during payment initiation:", error);
             alert(`An error occurred: ${error.message || "Please try again."}`);
 
+            // Update Firebase order status to reflect initiation failure
             if (firebaseOrderId) {
                 try {
                     await update(ref(database, `orders/${firebaseOrderId}`), {
@@ -337,6 +361,11 @@ const CategoryPage = ({ category }) => {
             </section>
         );
     }
+
+    // Determine read-only status for user-related fields
+    const isFullNameReadOnly = loggedIn && user?.displayName && user.displayName.split(' ')[0];
+    const isSurnameReadOnly = loggedIn && user?.displayName && user.displayName.split(' ')[1];
+    const isEmailReadOnly = loggedIn && user?.email; // Email is almost always present if loggedIn
 
     return (
         <section className="bg-black min-h-screen py-16 px-5 font-poppins text-blue-100">
@@ -447,10 +476,12 @@ const CategoryPage = ({ category }) => {
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
                                     required
                                 >
+                                    {/* Default options */}
                                     <option value="S">Small</option>
                                     <option value="M">Medium</option>
                                     <option value="L">Large</option>
                                     <option value="XL">XL</option>
+                                    {/* Dynamic options from product, if any */}
                                     {selectedProduct.sizes && selectedProduct.sizes.map(s => (
                                         <option key={s} value={s}>{s}</option>
                                     ))}
@@ -469,8 +500,11 @@ const CategoryPage = ({ category }) => {
                                     onChange={(e) => setFullName(e.target.value)}
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
                                     required
-                                    readOnly={loggedIn} // Make read-only if logged in
+                                    readOnly={isFullNameReadOnly} // Adjusted readOnly logic
                                 />
+                                {loggedIn && !isFullNameReadOnly && (
+                                    <p className="text-xs text-yellow-400 mt-1">Your display name is not set. Please fill this in.</p>
+                                )}
                             </div>
                             <div>
                                 <label htmlFor="surname" className="block text-sm font-semibold mb-1 text-gray-300">Last Name:</label>
@@ -481,8 +515,11 @@ const CategoryPage = ({ category }) => {
                                     onChange={(e) => setSurname(e.target.value)}
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
                                     required
-                                    readOnly={loggedIn} // Make read-only if logged in
+                                    readOnly={isSurnameReadOnly} // Adjusted readOnly logic
                                 />
+                                {loggedIn && !isSurnameReadOnly && (
+                                    <p className="text-xs text-yellow-400 mt-1">Your display name is not set. Please fill this in.</p>
+                                )}
                             </div>
                             <div>
                                 <label htmlFor="customerEmail" className="block text-sm font-semibold mb-1 text-gray-300">Email:</label>
@@ -494,7 +531,7 @@ const CategoryPage = ({ category }) => {
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
                                     required
                                     placeholder="yourname@example.com"
-                                    readOnly={loggedIn} // Make read-only if logged in
+                                    readOnly={isEmailReadOnly} // Adjusted readOnly logic
                                 />
                             </div>
                             <div>
@@ -504,7 +541,7 @@ const CategoryPage = ({ category }) => {
                                     type="text"
                                     value={pinCode}
                                     onChange={(e) => setPinCode(e.target.value)}
-                                    onBlur={fetchPincodeDetails}
+                                    onBlur={fetchPincodeDetails} // Trigger pincode fetch on blur
                                     maxLength={6}
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
                                     required
@@ -522,6 +559,7 @@ const CategoryPage = ({ category }) => {
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
                                     required
                                 />
+                                {pincodeError && !stateName && <p className="text-xs text-yellow-400 mt-1">Please fill State manually.</p>}
                             </div>
                             <div>
                                 <label htmlFor="district" className="block text-sm font-semibold mb-1 text-gray-300">District:</label>
@@ -533,6 +571,7 @@ const CategoryPage = ({ category }) => {
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
                                     required
                                 />
+                                {pincodeError && !district && <p className="text-xs text-yellow-400 mt-1">Please fill District manually.</p>}
                             </div>
                             <div>
                                 <label htmlFor="village" className="block text-sm font-semibold mb-1 text-gray-300">Village:</label>
@@ -544,11 +583,12 @@ const CategoryPage = ({ category }) => {
                                     className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
                                     required
                                 />
+                                <p className="text-xs text-gray-400 mt-1">Enter your specific village/locality name (not auto-filled).</p>
                             </div>
                         </div>
 
                         <p className="text-xl font-bold mb-6 text-emerald-50">
-                            Total Price: ₹{selectedProduct.price * quantity || "N/A"}
+                            Total Price: ₹{(selectedProduct.price * quantity).toFixed(2) || "N/A"}
                         </p>
 
                         <button
