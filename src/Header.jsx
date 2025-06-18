@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { auth } from "./firebase";
+import { auth } from "./firebase"; // Assuming './firebase' is correct for Firebase Auth
 
 import {
+    FaLeaf,
     FaGem,
     FaRing,
     FaGift,
@@ -22,6 +23,7 @@ const Header = () => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const profileRef = useRef(null);
 
+    // Effect for Firebase Auth State Changed
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((currentUser) => {
             console.log("Firebase Auth State Changed. Current User:", currentUser ? currentUser.email : "No user logged in");
@@ -30,6 +32,7 @@ const Header = () => {
         return () => unsubscribe();
     }, []);
 
+    // Effect for handling clicks outside the profile dropdown
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -47,7 +50,7 @@ const Header = () => {
             await auth.signOut();
             setUser(null);
             setShowProfileMenu(false);
-            navigate("/");
+            navigate("/"); // Redirect to home after logout
             console.log("User logged out successfully.");
         } catch (error) {
             console.error("Error logging out:", error.message);
@@ -77,11 +80,8 @@ const Header = () => {
                 className="logo-section"
                 title="Go to Home"
             >
-                <img
-                    src={"/Vashudhara Logo.jpg"}
-                    alt="Vashudhara Logo"
-                    className="logo-image"
-                />
+                <FaLeaf className="logo-icon" />
+                <span>Vashudhara</span>
             </div>
 
             <nav className="nav-links-section" aria-label="Main Navigation">
@@ -104,6 +104,17 @@ const Header = () => {
             </nav>
 
             <div className="user-action-section">
+                <a
+                    href="https://www.instagram.com/vashudharastore/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Visit us on Instagram"
+                    className="instagram-link"
+                    aria-label="Instagram Profile"
+                >
+                    <FaInstagram />
+                </a>
+
                 <div className="profile-dropdown-container" ref={profileRef}>
                     <button
                         onClick={toggleProfileMenu}
@@ -145,51 +156,37 @@ const Header = () => {
                             <Link to="/gift-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Gift Cards</Link>
 
                             <div className="dropdown-section-title">Vashudhara Insider <span className="new-badge">New</span></div>
+                            {/* REMOVED: <Link to="/vashudhara-credit" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Vashudhara Credit</Link> */}
                             <Link to="/coupons" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Coupons</Link>
                             <Link to="/saved-cards" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved Cards</Link>
+                            {/* REMOVED: <Link to="/saved-vpa" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved VPA</Link> */}
+                            {/* Note: I'm assuming 'Saved Addresses' corresponds to your '/addresses' route in App.jsx.
+                                If not, adjust 'to' prop accordingly. If you want to remove this too, let me know. */}
                             <Link to="/addresses" onClick={() => setShowProfileMenu(false)} className="dropdown-item" role="menuitem">Saved Addresses</Link>
-
-                            <a
-                                href="https://www.instagram.com/vashudharastore/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={() => setShowProfileMenu(false)}
-                                className="dropdown-item instagram-dropdown-link"
-                                role="menuitem"
-                            >
-                                <FaInstagram style={{ marginRight: '8px', color: 'var(--instagram-color)' }} /> Visit our Instagram
-                            </a>
-
                             <Link to="/contact" onClick={() => setShowProfileMenu(false)} className="dropdown-item contact-dropdown-item" role="menuitem">Contact Us</Link>
                         </div>
                     )}
                 </div>
             </div>
 
+            {/* Inline CSS - remains as provided by you */}
             <style>
                 {`
                 /* CSS Variables for easy theme management */
                 :root {
                     --primary-gradient: linear-gradient(90deg, #0f2027, #203a43, #2c5364);
-                    --primary-color: #00ffe7;
-                    --text-color-dark: #e0e0e0; /* Renamed for clarity in white background */
-                    --text-color-light: #333; /* For text on white background */
-                    --text-color-medium: #555;
-                    --text-color-light-gray: #777;
-
-                    --accent-bg-color: rgba(0,255,231,0.1);
-                    --accent-hover-color: #00ccb3;
-                    --instagram-color: #e1306c;
-                    --dropdown-bg: #FFFFFF; /* White dropdown background */
-                    --dropdown-item-hover: rgba(0,255,231,0.1); /* Lighter hover for white bg */
-                    --border-color-light: rgba(0,0,0,0.1); /* Light border for white bg */
-                    --light-text-color: #a0a0a0; /* This variable might need adjustment based on final use */
-                    --button-text-color: #000;
-                    --new-badge-bg: #ffc107;
-                    --new-badge-text: #333;
-
-                    --shadow-light: rgba(0,0,0,0.2);
-                    --shadow-medium: rgba(0,0,0,0.4);
+                    --primary-color: #00ffe7; /* Bright cyan/teal */
+                    --text-color: #e0e0e0; /* Lighter grey for general text */
+                    --accent-bg-color: rgba(0,255,231,0.1); /* Light transparent cyan */
+                    --accent-hover-color: #00ccb3; /* Slightly darker primary color on hover */
+                    --instagram-color: #e1306c; /* Instagram's signature pinkish-red */
+                    --dropdown-bg: #152535; /* Darker background for dropdown */
+                    --dropdown-item-hover: rgba(0,255,231,0.25); /* More visible transparent cyan for dropdown item hover */
+                    --border-color: rgba(0,255,231,0.3); /* Stronger transparent cyan for borders */
+                    --light-text-color: #a0a0a0; /* Lighter grey for secondary text */
+                    --button-text-color: #000; /* Black for primary buttons */
+                    --new-badge-bg: #ffc107; /* Yellowish for new badge */
+                    --new-badge-text: #333; /* Dark text for new badge */
                 }
 
                 /* General reset/base styles for better consistency */
@@ -202,112 +199,80 @@ const Header = () => {
                     font-family: 'Poppins', sans-serif;
                     -webkit-font-smoothing: antialiased;
                     -moz-osx-font-smoothing: grayscale;
-                    background-color: #1a1a1a;
+                    background-color: #1a1a1a; /* A dark background for contrast */
                 }
+
 
                 /* Base styles (Mobile First - applies to all screens by default) */
                 .header-container {
                     display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    background: #FFFFFF; /* Changed to white */
-                    padding: 10px 15px;
-                    color: var(--text-color-light); /* Changed to light text color */
+                    flex-direction: column; /* Stacks vertically on small screens */
+                    justify-content: center; /* Center horizontally in column mode */
+                    align-items: center; /* Center horizontally in column mode */
+                    background: var(--primary-gradient);
+                    padding: 10px 15px; /* Slightly more padding for mobile */
+                    color: var(--text-color);
                     position: sticky;
                     top: 0;
                     z-index: 9999;
-                    box-shadow: 0 4px 15px var(--shadow-medium); /* Adjusted shadow for white background */
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.4); /* Stronger, deeper shadow */
                     font-family: 'Poppins', sans-serif;
-                    user-select: none;
-                    min-height: auto;
-                    gap: 12px;
-                    flex-wrap: wrap;
+                    user-select: none; /* Prevent text selection */
+                    min-height: auto; /* Allow height to adjust */
+                    gap: 12px; /* Increased spacing between main sections (logo, nav, user actions) */
+                    flex-wrap: wrap; /* Allow main sections to wrap if needed */
                 }
 
                 .logo-section {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
+                    gap: 8px; /* Slightly larger gap for mobile */
                     font-weight: 700;
-                    font-size: 22px;
-                    letter-spacing: 2.5px;
+                    font-size: 22px; /* A bit larger for mobile logo */
+                    letter-spacing: 2.5px; /* Refined letter spacing */
                     cursor: pointer;
-                    color: var(--text-color-light); /* Adjusted for white background */
-                    transition: transform 0.2s ease, box-shadow 0.2s ease;
-                    flex-shrink: 0;
+                    color: var(--primary-color);
+                    text-shadow: 0 0 10px var(--primary-color), 0 0 15px rgba(0,255,231,0.5); /* More pronounced glow */
+                    transition: transform 0.2s ease, text-shadow 0.2s ease;
+                    flex-shrink: 0; /* Prevent shrinking */
                 }
                 .logo-section:hover {
-                    transform: scale(1.08);
+                    transform: scale(1.08); /* Scale up on hover */
+                    text-shadow: 0 0 12px var(--primary-color), 0 0 20px rgba(0,255,231,0.7); /* Intensify glow on hover */
+                }
+                .logo-icon {
+                    font-size: 32px; /* Slightly larger icon for mobile */
+                    color: var(--primary-color);
+                    text-shadow: 0 0 12px var(--primary-color); /* Stronger shadow */
                 }
 
-                .logo-image {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
-                    object-fit: cover;
-                    box-shadow: 0 0 10px rgba(0,0,0,0.2), 0 0 15px rgba(0,0,0,0.1); /* Adjusted for white background */
-                    transition: transform 0.2s ease, box-shadow 0.2s ease;
-                }
-                .logo-section:hover .logo-image {
-                    transform: scale(1.08);
-                    box-shadow: 0 0 12px rgba(0,0,0,0.3), 0 0 20px rgba(0,0,0,0.2); /* Adjusted for white background */
-                }
-
-
-                /* Navigation Links Section - MOBILE SPECIFIC 3-TAB LAYOUT */
+                /* Navigation Links Section - Key for Horizontal Scroll */
                 .nav-links-section {
                     display: flex;
-                    flex-wrap: nowrap; /* Keep items in a row initially */
+                    flex-wrap: nowrap; /* IMPORTANT: Ensures items stay in a single row */
                     justify-content: flex-start; /* Aligns items to start for scroll */
                     align-items: center;
-                    gap: 8px; /* Reduced gap between links (closer) */
-                    margin: 8px 0;
-                    width: 100%;
-                    overflow-x: auto; /* Enable horizontal scrolling initially */
-                    -webkit-overflow-scrolling: touch;
-                    scrollbar-width: none;
-                    padding-bottom: 8px;
-                    border-bottom: 1px solid var(--border-color-light); /* Subtle bottom border */
-                    min-width: 0;
+                    gap: 12px; /* Increased spacing between individual nav links */
+                    margin: 8px 0; /* Vertical margin for separation */
+                    width: 100%; /* IMPORTANT: Ensures it takes full width for scroll to work */
+                    overflow-x: auto; /* IMPORTANT: Enables horizontal scrolling */
+                    -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS */
+                    scrollbar-width: none; /* Hide scrollbar for Firefox */
+                    padding-bottom: 8px; /* Space for potential scrollbar/visual cue on mobile */
+                    border-bottom: 1px solid rgba(255,255,255,0.1); /* Subtle bottom border as scroll indicator */
+                    min-width: 0; /* Fixes potential flexbox overflow issues on narrow screens */
                 }
+                /* Hide scrollbar for Webkit browsers (Chrome, Safari) */
                 .nav-links-section::-webkit-scrollbar {
                     display: none;
                 }
 
-                /* Mobile 3-Tab Layout (for smaller screens) */
-                @media (max-width: 600px) { /* Adjust breakpoint as needed, e.g., 500px, 480px */
-                    .nav-links-section {
-                        overflow-x: hidden; /* Hide scroll on very small screens */
-                        justify-content: space-around; /* Distribute items evenly */
-                        flex-wrap: wrap; /* Allow wrapping if needed, though 3 tabs should fit */
-                        gap: 0; /* No gap needed for space-around */
-                        padding-left: 0;
-                        padding-right: 0;
-                    }
-                    .nav-link-item {
-                        flex: 1 1 auto; /* Make each item take equal space */
-                        min-width: 0; /* Allow shrinking */
-                        max-width: 33.33%; /* Approximately 3 items per row */
-                        padding: 8px 5px; /* Reduced padding */
-                        font-size: 11px; /* Smaller font for 3 tabs */
-                        gap: 2px; /* Even less gap between icon/text */
-                    }
-                     .nav-link-item span {
-                        text-align: center;
-                        width: 100%;
-                     }
-                    .nav-link-icon {
-                        font-size: 14px; /* Slightly smaller icons for 3 tabs */
-                    }
-                }
-
                 .nav-link-item {
                     display: flex;
-                    flex-direction: column;
-                    align-items: center;
+                    flex-direction: column; /* Stack icon and text vertically */
+                    align-items: center; /* Center horizontally within the link */
                     text-decoration: none;
-                    padding: 8px 10px; /* Reduced horizontal padding */
+                    padding: 8px 10px; /* Reduced horizontal padding to prevent crowding */
                     border-radius: 8px;
                     font-weight: 600;
                     font-size: 13px;
@@ -315,22 +280,22 @@ const Header = () => {
                     transition: all 0.25s ease;
                     cursor: pointer;
                     user-select: none;
-                    white-space: nowrap;
-                    flex-shrink: 0;
-                    color: var(--text-color-medium); /* Adjusted for white background */
-                    background-color: transparent;
+                    white-space: nowrap; /* Ensures text never wraps */
+                    flex-shrink: 0; /* Prevents items from shrinking */
+                    color: var(--text-color);
+                    background-color: transparent; /* No background by default */
                     box-shadow: none;
-                    position: relative;
+                    position: relative; /* For the active bottom line */
                     overflow: hidden;
-                    border: 1px solid transparent;
+                    border: 1px solid transparent; /* No border by default */
                 }
 
-                /* Active state indicator */
+                /* Active state indicator (only bottom line now) */
                 .nav-link-item.active {
-                    color: var(--primary-color); /* Retain original primary color for active */
-                    background-color: transparent;
-                    border-color: transparent;
-                    box-shadow: none;
+                    color: var(--primary-color);
+                    background-color: transparent; /* Keep background transparent */
+                    border-color: transparent; /* No border in active state */
+                    box-shadow: none; /* No box shadow in active state */
                 }
                 .nav-link-item.active::after {
                     content: '';
@@ -338,7 +303,7 @@ const Header = () => {
                     bottom: 0;
                     left: 0;
                     width: 100%;
-                    height: 3px;
+                    height: 3px; /* Thickness of the line */
                     background-color: var(--primary-color);
                     border-radius: 0 0 3px 3px;
                     box-shadow: 0 0 5px var(--primary-color);
@@ -351,19 +316,20 @@ const Header = () => {
 
                 /* Hover effect: Only change icon and text color */
                 .nav-link-item:hover {
-                    color: var(--primary-color);
-                    background-color: transparent;
-                    box-shadow: none;
-                    transform: translateY(-2px);
+                    color: var(--accent-hover-color); /* Change text and icon color on hover */
+                    background-color: transparent; /* Ensure no background change */
+                    box-shadow: none; /* No box shadow on hover */
+                    transform: translateY(-2px); /* Slight lift on hover, optional */
                 }
+                /* Keep active item text color and glow, but no extra transform on hover */
                 .nav-link-item.active:hover {
-                    color: var(--primary-color);
-                    transform: translateY(0);
+                    color: var(--primary-color); /* Active item remains primary color on hover */
+                    transform: translateY(0); /* Active items stay in place */
                     background-color: transparent;
                     box-shadow: none;
                 }
                 .nav-link-icon {
-                    font-size: 15px;
+                    font-size: 15px; /* Larger icons for mobile nav */
                     display: flex;
                     align-items: center;
                 }
@@ -374,13 +340,24 @@ const Header = () => {
                     gap: 12px;
                     font-size: 13px;
                     font-weight: 600;
-                    color: var(--text-color-light); /* Adjusted for white background */
+                    color: var(--text-color);
                     flex-shrink: 0;
                     margin-top: 12px;
                     width: 100%;
                     justify-content: center;
                     white-space: nowrap;
                     position: relative;
+                }
+
+                .instagram-link {
+                    color: var(--instagram-color);
+                    font-size: 20px;
+                    text-shadow: 0 0 8px var(--instagram-color);
+                    transition: transform 0.2s ease, text-shadow 0.2s ease;
+                }
+                .instagram-link:hover {
+                    transform: scale(1.25);
+                    text-shadow: 0 0 12px var(--instagram-color), 0 0 20px rgba(225,48,108,0.7);
                 }
 
                 .user-email-display {
@@ -401,7 +378,7 @@ const Header = () => {
                     border: none;
                     color: var(--button-text-color);
                     font-weight: 700;
-                    box-shadow: 0 0 8px rgba(0,0,0,0.15);
+                    box-shadow: 0 0 8px var(--primary-color);
                     transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
                     user-select: none;
                     display: flex;
@@ -411,23 +388,21 @@ const Header = () => {
                     justify-content: center;
                 }
                 .auth-button:hover {
-                    background-color: var(--accent-hover-color);
+                    background-color: #00ccb3;
                     transform: scale(1.05);
-                    box-shadow: 0 0 12px rgba(0,0,0,0.25);
+                    box-shadow: 0 0 12px #00ccb3;
                 }
                 .auth-button.active-profile-button {
-                    background-color: var(--accent-hover-color);
+                    background-color: #00ccb3;
                     transform: scale(1.05);
-                    box-shadow: 0 0 12px rgba(0,0,0,0.25);
+                    box-shadow: 0 0 12px #00ccb3;
                 }
                 .profile-icon {
                     font-size: 18px;
-                    color: var(--button-text-color);
                 }
                 .dropdown-arrow {
                     margin-left: 4px;
                     transition: transform 0.2s ease;
-                    color: var(--button-text-color);
                 }
                 .dropdown-arrow.open {
                     transform: rotate(180deg);
@@ -443,9 +418,9 @@ const Header = () => {
                     top: calc(100% + 10px);
                     right: 0;
                     background-color: var(--dropdown-bg);
-                    border: 1px solid var(--border-color-light);
+                    border: 1px solid var(--border-color);
                     border-radius: 10px;
-                    box-shadow: 0 8px 20px var(--shadow-light);
+                    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
                     min-width: 220px;
                     max-width: 95vw;
                     z-index: 10000;
@@ -463,7 +438,7 @@ const Header = () => {
                     padding: 10px 15px;
                     font-size: 14px;
                     color: var(--primary-color);
-                    border-bottom: 1px solid var(--border-color-light);
+                    border-bottom: 1px solid var(--border-color);
                     margin-bottom: 10px;
                     font-weight: 600;
                     line-height: 1.5;
@@ -473,7 +448,7 @@ const Header = () => {
                     align-items: center;
                     padding: 9px 15px;
                     text-decoration: none;
-                    color: var(--text-color-medium);
+                    color: var(--text-color);
                     font-size: 14px;
                     font-weight: 500;
                     transition: background-color 0.2s ease, color 0.2s ease, border-left-color 0.2s ease;
@@ -489,9 +464,9 @@ const Header = () => {
                 .dropdown-section-title {
                     padding: 10px 15px 5px;
                     font-size: 13px;
-                    color: var(--text-color-light-gray);
+                    color: var(--light-text-color);
                     font-weight: 600;
-                    border-top: 1px solid var(--border-color-light);
+                    border-top: 1px solid var(--border-color);
                     margin-top: 12px;
                 }
                 .new-badge {
@@ -507,7 +482,7 @@ const Header = () => {
                 .logout-button {
                     background: none;
                     border: none;
-                    color: var(--text-color-medium);
+                    color: var(--text-color);
                     cursor: pointer;
                     text-align: left;
                     width: 100%;
@@ -526,12 +501,6 @@ const Header = () => {
                     margin-top: 10px;
                 }
 
-                .instagram-dropdown-link {
-                }
-                .instagram-dropdown-link:hover {
-                    color: var(--primary-color);
-                }
-
 
                 /* --- Tablet and Larger Screens (@media (min-width: 768px)) --- */
                 @media (min-width: 768px) {
@@ -542,7 +511,7 @@ const Header = () => {
                         min-height: 80px;
                         gap: 25px;
                         flex-wrap: nowrap;
-                        box-shadow: 0 5px 25px var(--shadow-light);
+                        box-shadow: 0 5px 25px rgba(0,0,0,0.4);
                         width: 100%;
                     }
                     .logo-section {
@@ -551,15 +520,14 @@ const Header = () => {
                         gap: 12px;
                         flex-shrink: 0;
                     }
-                    .logo-image {
-                        width: 55px;
-                        height: 55px;
+                    .logo-icon {
+                        font-size: 42px;
                     }
                     .nav-links-section {
                         flex-wrap: nowrap;
                         justify-content: center;
                         margin: 0 auto;
-                        gap: 15px; /* Further reduced gap for desktop */
+                        gap: 35px; /* Increased gap for desktop nav items */
                         overflow-x: visible;
                         padding-bottom: 0;
                         border-bottom: none;
@@ -568,26 +536,26 @@ const Header = () => {
                         flex-basis: auto;
                     }
                     .nav-link-item {
-                        padding: 10px 12px; /* Adjusted padding for desktop */
-                        font-size: 14px; /* Adjusted font size for desktop */
-                        gap: 5px;
+                        padding: 10px 15px; /* Adjusted padding for desktop */
+                        font-size: 15px; /* Slightly smaller font for more items to fit */
+                        gap: 6px; /* Slightly more gap between icon and text */
                         border-radius: 10px;
                         flex-shrink: 0;
                     }
                     .nav-link-item.active {
-                        box-shadow: none;
+                        box-shadow: none; /* No box-shadow on active state on desktop */
                     }
                     .nav-link-item.active::after {
                         height: 4px;
                     }
                     .nav-link-item:hover {
-                        transform: translateY(-3px);
+                        transform: translateY(-3px); /* Subtle lift on hover */
                     }
                     .nav-link-item.active:hover {
                         transform: translateY(0);
                     }
                     .nav-link-icon {
-                        font-size: 18px;
+                        font-size: 18px; /* Adjusted icon size for desktop */
                     }
                     .user-action-section {
                         margin-top: 0;
@@ -597,6 +565,10 @@ const Header = () => {
                         gap: 20px;
                         margin-left: auto;
                         flex-shrink: 0;
+                    }
+                    .instagram-link {
+                        font-size: 24px;
+                        text-shadow: 0 0 10px var(--instagram-color);
                     }
                     .user-email-display {
                         max-width: 150px;

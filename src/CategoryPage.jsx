@@ -504,8 +504,8 @@ const CategoryPage = ({ category }) => {
                         <button
                             onClick={handleAddToWishlist}
                             className={`w-full py-3 rounded-full text-lg font-semibold transition-colors duration-200 ${isProductInWishlist(selectedProduct.id)
-                                    ? "bg-gray-600 text-white cursor-not-allowed"
-                                    : "bg-purple-600 text-white hover:bg-purple-700"
+                                ? "bg-gray-600 text-white cursor-not-allowed"
+                                : "bg-purple-600 text-white hover:bg-purple-700"
                                 }`}
                             disabled={isProductInWishlist(selectedProduct.id)}
                         >

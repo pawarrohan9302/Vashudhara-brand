@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "./firebase";
+import { auth } from "./firebase"; // Relative path
 
 const Login = () => {
     const navigate = useNavigate();
@@ -12,16 +12,19 @@ const Login = () => {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
+    // Get the path the user was trying to access, default to '/'
     const from = location.state?.from?.pathname || "/";
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setError("");
         setLoading(true);
+
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            navigate(from, { replace: true });
+            navigate(from, { replace: true }); // Redirect to original page
         } catch (err) {
+            console.error("Login error:", err);
             switch (err.code) {
                 case "auth/invalid-email":
                 case "auth/user-disabled":
@@ -39,8 +42,8 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-500 to-blue-500 px-4 py-10 sm:px-6 lg:px-8">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 sm:p-10">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-teal-500 to-cyan-500 px-4">
+            <div className="max-w-md w-full bg-white rounded-lg p-8 shadow-lg">
                 <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">
                     Login to Your Account
                 </h2>
@@ -53,7 +56,7 @@ const Login = () => {
                         placeholder="Email Address"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400"
                         required
                     />
                     <input
@@ -61,27 +64,27 @@ const Login = () => {
                         placeholder="Password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400"
                         required
                     />
                     <button
                         type="submit"
                         disabled={loading}
                         className={`w-full py-3 rounded-md font-semibold transition ${loading
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-teal-600 hover:bg-teal-700 text-white"
                             }`}
                     >
                         {loading ? "Logging In..." : "Login"}
                     </button>
-                    <p className="text-center mt-3 text-gray-600 text-sm">
-                        <Link to="/forgot-password" className="text-indigo-600 font-semibold hover:underline">
+                    <p className="text-center mt-3 text-gray-600">
+                        <Link to="/forgot-password" className="text-teal-600 font-semibold hover:underline">
                             Forgot Password?
                         </Link>
                     </p>
-                    <p className="text-center mt-3 text-gray-600 text-sm">
+                    <p className="text-center mt-3 text-gray-600">
                         Don’t have an account?{" "}
-                        <Link to="/register" className="text-indigo-600 font-semibold hover:underline">
+                        <Link to="/register" className="text-teal-600 font-semibold hover:underline">
                             Register here
                         </Link>
                     </p>
