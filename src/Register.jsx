@@ -1,29 +1,47 @@
-// src/Register.js
-import React, { useState } from "react";
-// import { auth } from "./firebase"; // We might not use this directly for initial creation with OTP
-// import { createUserWithEmailAndPassword } from "firebase/auth"; // Might be called from a Cloud Function now
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-
-// Assume you have a way to call Firebase Cloud Functions, e.g.,
-// import { getFunctions, httpsCallable } from "firebase/functions";
-// const functions = getFunctions();
-// const requestOtpFunction = httpsCallable(functions, 'requestEmailOTP');
-// const verifyOtpFunction = httpsCallable(functions, 'verifyEmailOTPAndRegister');
 
 const Register = () => {
     const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [otp, setOtp] = useState(""); // New state for OTP
+    const [otp, setOtp] = useState("");
+    const [generatedOtp, setGeneratedOtp] = useState("");
+    const [step, setStep] = useState(1);
     const [error, setError] = useState("");
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(false);
-    const [step, setStep] = useState(1); // 1: Input Email/Pass, 2: Verify OTP
-    // const [confirmationResult, setConfirmationResult] = useState(null); // For phone auth, not directly email OTP
+    const [timer, setTimer] = useState(60);
+    const [canResend, setCanResend] = useState(false);
 
-    // --- Phase 1: Request OTP ---
-    const handleRequestOtp = async (e) => {
+    useEffect(() => {
+        let countdown;
+        if (step === 2 && timer > 0) {
+            countdown = setInterval(() => {
+                setTimer((prev) => {
+                    if (prev === 1) {
+                        clearInterval(countdown);
+                        setCanResend(true);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(countdown);
+    }, [step, timer]);
+
+    const generateOtp = () => {
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        setGeneratedOtp(otpCode);
+        console.log("Generated OTP (for demo):", otpCode); // Simulate sending
+        setMessage("OTP sent to your email. (Check console in demo)");
+        setTimer(60);
+        setCanResend(false);
+    };
+
+    const handleRequestOtp = (e) => {
         e.preventDefault();
         setError("");
         setMessage("");
@@ -35,65 +53,32 @@ const Register = () => {
             return setError("Password should be at least 6 characters.");
         }
 
-        setLoading(true);
-        try {
-            // Call a Firebase Cloud Function to send OTP to email
-            // await requestOtpFunction({ email, password }); // Pass password to function if it creates user later
-            // For now, let's simulate this, you'd replace it with actual function call
-            console.log(`Simulating sending OTP to ${email}`);
-            setMessage("An OTP has been sent to your email. Please check your inbox and spam folder.");
-            setStep(2); // Move to OTP verification step
-
-        } catch (err) {
-            console.error("Request OTP error:", err);
-            setError("Failed to send OTP. Please try again.");
-            // Add specific error handling based on your cloud function's errors
-        } finally {
-            setLoading(false);
-        }
+        generateOtp();
+        setStep(2);
     };
 
-    // --- Phase 2: Verify OTP and Finalize Registration ---
-    const handleVerifyOtpAndRegister = async (e) => {
+    const handleVerifyOtpAndRegister = (e) => {
         e.preventDefault();
         setError("");
         setMessage("");
 
-        if (!otp) {
-            return setError("Please enter the OTP.");
+        if (!otp || otp !== generatedOtp) {
+            return setError("Invalid OTP. Please enter the correct OTP.");
         }
 
-        setLoading(true);
-        try {
-            // Call a Firebase Cloud Function to verify OTP and then create the user
-            // This function would receive email, password, and otp
-            // It would verify OTP, and if valid, call admin.auth().createUser() and then admin.auth().updateUser() if needed
-            // const result = await verifyOtpFunction({ email, password, otp });
+        setMessage("OTP verified! Account registered successfully.");
+        setTimeout(() => navigate("/login"), 2000);
+    };
 
-            // For now, let's simulate success. In real app, this would be a backend call.
-            console.log(`Simulating OTP verification for ${email} with OTP ${otp}`);
-            // If verification successful:
-            setMessage("OTP verified! Account registered successfully. Redirecting to login...");
-            setEmail("");
-            setPassword("");
-            setConfirmPassword("");
-            setOtp("");
-            setTimeout(() => {
-                navigate("/login");
-            }, 2000);
-
-        } catch (err) {
-            console.error("OTP verification/registration error:", err);
-            // More user-friendly error messages based on Cloud Function response
-            setError(err.message || "Failed to verify OTP or register account. Please try again.");
-        } finally {
-            setLoading(false);
+    const handleResendOtp = () => {
+        if (canResend) {
+            generateOtp();
         }
     };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-500 to-pink-500 px-4">
-            <div className="max-w-md w-full bg-white rounded-lg p-8 shadow-lg">
+            <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-lg">
                 <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">
                     Register Account
                 </h2>
@@ -131,15 +116,18 @@ const Register = () => {
                             type="submit"
                             disabled={loading}
                             className={`w-full py-3 rounded-md font-semibold transition ${loading
-                                ? "bg-gray-400 cursor-not-allowed"
-                                : "bg-purple-600 hover:bg-purple-700 text-white"
+                                    ? "bg-gray-400 cursor-not-allowed"
+                                    : "bg-purple-600 hover:bg-purple-700 text-white"
                                 }`}
                         >
                             {loading ? "Sending OTP..." : "Register & Send OTP"}
                         </button>
                         <p className="text-center mt-3 text-gray-600">
                             Already have an account?{" "}
-                            <Link to="/login" className="text-purple-600 font-semibold hover:underline">
+                            <Link
+                                to="/login"
+                                className="text-purple-600 font-semibold hover:underline"
+                            >
                                 Login here
                             </Link>
                         </p>
@@ -149,29 +137,46 @@ const Register = () => {
                 {step === 2 && (
                     <form onSubmit={handleVerifyOtpAndRegister} className="space-y-5">
                         <p className="text-center text-gray-700">
-                            An OTP has been sent to **{email}**. Please enter it below.
+                            OTP sent to <strong>{email}</strong>
                         </p>
                         <input
-                            type="text" // OTP is typically text/number
+                            type="text"
                             placeholder="Enter OTP"
                             value={otp}
                             onChange={(e) => setOtp(e.target.value)}
                             className="w-full px-4 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-400"
                             required
                         />
+                        <div className="text-center text-sm text-gray-700">
+                            {canResend ? (
+                                <button
+                                    type="button"
+                                    onClick={handleResendOtp}
+                                    className="text-purple-600 hover:underline font-medium"
+                                >
+                                    Resend OTP
+                                </button>
+                            ) : (
+                                <p>Resend available in {timer}s</p>
+                            )}
+                        </div>
                         <button
                             type="submit"
                             disabled={loading}
                             className={`w-full py-3 rounded-md font-semibold transition ${loading
-                                ? "bg-gray-400 cursor-not-allowed"
-                                : "bg-purple-600 hover:bg-purple-700 text-white"
+                                    ? "bg-gray-400 cursor-not-allowed"
+                                    : "bg-purple-600 hover:bg-purple-700 text-white"
                                 }`}
                         >
                             {loading ? "Verifying..." : "Verify OTP & Register"}
                         </button>
                         <button
                             type="button"
-                            onClick={() => { setStep(1); setError(""); setMessage(""); setLoading(false); }}
+                            onClick={() => {
+                                setStep(1);
+                                setError("");
+                                setMessage("");
+                            }}
                             className="w-full py-3 mt-2 rounded-md font-semibold text-purple-600 border border-purple-600 hover:bg-purple-50 transition"
                         >
                             Go Back / Edit Details
