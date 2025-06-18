@@ -119,48 +119,48 @@ const Cart = () => {
     // Conditional rendering for different states
     if (loading) {
         return (
-            <section className="bg-black min-h-screen py-16 px-5 font-poppins text-blue-100 flex justify-center items-center">
-                <p className="text-xl text-emerald-300">Loading your cart...</p>
+            <section className="bg-white min-h-screen py-16 px-5 font-poppins text-gray-800 flex justify-center items-center">
+                <p className="text-xl text-green-700">Loading your cart...</p>
             </section>
         );
     }
 
     if (!user) {
         return (
-            <section className="bg-black min-h-screen py-16 px-5 font-poppins text-blue-100 flex justify-center items-center">
-                <div className="text-center p-8 bg-gray-800 rounded-lg shadow-xl">
-                    <p className="text-2xl font-bold text-red-400 mb-6">Please log in to view your cart.</p>
+            <section className="bg-white min-h-screen py-16 px-5 font-poppins text-gray-800 flex justify-center items-center">
+                <div className="text-center p-8 bg-gray-100 rounded-lg shadow-xl border border-gray-200">
+                    <p className="text-2xl font-bold text-red-600 mb-6">Please log in to view your cart.</p>
                     <button
                         onClick={() => navigate('/login')}
-                        className="px-8 py-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors duration-300 transform hover:scale-105"
+                        className="px-8 py-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-300 transform hover:scale-105"
                     >
                         Go to Login Page
                     </button>
-                    <p className="mt-4 text-gray-400">If you don't have an account, you can register there.</p>
+                    <p className="mt-4 text-gray-600">If you don't have an account, you can register there.</p>
                 </div>
             </section>
         );
     }
 
     return (
-        <section className="bg-black min-h-screen py-16 px-5 font-poppins text-blue-100">
+        <section className="bg-white min-h-screen py-16 px-5 font-poppins text-gray-800">
             <div className="max-w-4xl mx-auto text-center mb-10">
-                <h1 className="text-4xl font-bold mb-3 text-emerald-300 capitalize">
+                <h1 className="text-4xl font-bold mb-3 text-green-700 capitalize">
                     Your Shopping Cart
                 </h1>
-                <p className="text-lg text-slate-400">
+                <p className="text-lg text-gray-600">
                     Review your selected items before proceeding to checkout.
                 </p>
-                {user && <p className="text-sm text-gray-400 mt-2">Logged in as: {user.email}</p>}
+                {user && <p className="text-sm text-gray-500 mt-2">Logged in as: {user.email}</p>}
             </div>
 
             <div className="max-w-4xl mx-auto">
                 {cartItems.length === 0 ? (
-                    <div className="text-center p-10 bg-gray-800 rounded-lg shadow-lg">
-                        <p className="text-2xl text-gray-400 mb-6">Your cart is currently empty!</p>
+                    <div className="text-center p-10 bg-gray-100 rounded-lg shadow-lg border border-gray-200">
+                        <p className="text-2xl text-gray-600 mb-6">Your cart is currently empty!</p>
                         <button
                             onClick={() => navigate('/collections')}
-                            className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors duration-300"
+                            className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-300"
                         >
                             Start Shopping
                         </button>
@@ -171,20 +171,20 @@ const Cart = () => {
                             {cartItems.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="bg-gray-800 rounded-xl shadow-lg flex flex-col sm:flex-row items-center p-4 sm:p-6 gap-4 border border-gray-700"
+                                    className="bg-gray-100 rounded-xl shadow-lg flex flex-col sm:flex-row items-center p-4 sm:p-6 gap-4 border border-gray-200"
                                 >
                                     <img
                                         src={item.productImage || "https://via.placeholder.com/100"}
                                         alt={item.productTitle}
-                                        className="w-32 h-32 object-cover rounded-lg flex-shrink-0"
+                                        className="w-32 h-32 object-cover rounded-lg flex-shrink-0 border border-gray-300"
                                     />
                                     <div className="flex-grow text-center sm:text-left">
-                                        <h3 className="text-xl sm:text-2xl font-bold text-emerald-200 mb-2">
+                                        <h3 className="text-xl sm:text-2xl font-bold text-green-800 mb-2">
                                             {item.productTitle || 'Unknown Product'}
                                         </h3>
-                                        <p className="text-gray-300 text-sm sm:text-base">Brand: {item.brand || 'N/A'}</p>
-                                        <p className="text-gray-300 text-sm sm:text-base">Size: <strong className="text-emerald-300">{item.size || 'N/A'}</strong></p>
-                                        <p className="text-lg sm:text-xl font-semibold text-emerald-50 mt-1">
+                                        <p className="text-gray-700 text-sm sm:text-base">Brand: {item.brand || 'N/A'}</p>
+                                        <p className="text-gray-700 text-sm sm:text-base">Size: <strong className="text-green-700">{item.size || 'N/A'}</strong></p>
+                                        <p className="text-lg sm:text-xl font-semibold text-gray-900 mt-1">
                                             Price: ₹{item.price != null ? parseFloat(item.price).toFixed(2) : 'N/A'}
                                         </p>
                                     </div>
@@ -192,7 +192,7 @@ const Cart = () => {
                                         <div className="flex items-center space-x-2">
                                             <button
                                                 onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                                className="bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700 transition-colors duration-200"
+                                                className="bg-gray-300 text-gray-800 p-2 rounded-md hover:bg-gray-400 transition-colors duration-200"
                                             >
                                                 -
                                             </button>
@@ -201,18 +201,18 @@ const Cart = () => {
                                                 min="1"
                                                 value={item.quantity}
                                                 onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                                className="w-16 p-2 rounded-lg border border-gray-600 bg-gray-900 text-white text-center outline-none focus:border-emerald-500"
+                                                className="w-16 p-2 rounded-lg border border-gray-300 bg-white text-gray-900 text-center outline-none focus:border-green-500"
                                             />
                                             <button
                                                 onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                                className="bg-gray-600 text-white p-2 rounded-md hover:bg-gray-700 transition-colors duration-200"
+                                                className="bg-gray-300 text-gray-800 p-2 rounded-md hover:bg-gray-400 transition-colors duration-200"
                                             >
                                                 +
                                             </button>
                                         </div>
                                         <button
                                             onClick={() => handleRemoveItem(item.id)}
-                                            className="text-red-400 hover:text-red-600 text-sm font-semibold transition-colors duration-200 mt-2"
+                                            className="text-red-500 hover:text-red-700 text-sm font-semibold transition-colors duration-200 mt-2"
                                         >
                                             Remove
                                         </button>
@@ -221,10 +221,10 @@ const Cart = () => {
                             ))}
                         </div>
 
-                        <div className="mt-8 p-6 bg-gray-700 rounded-xl shadow-lg text-white">
+                        <div className="mt-8 p-6 bg-gray-100 rounded-xl shadow-lg text-gray-900 border border-gray-200">
                             <div className="flex justify-between items-center mb-4">
                                 <span className="text-xl font-bold">Cart Total:</span>
-                                <span className="text-2xl font-extrabold text-emerald-300">
+                                <span className="text-2xl font-extrabold text-green-700">
                                     ₹{calculateCartTotal().toFixed(2)}
                                 </span>
                             </div>
@@ -241,7 +241,7 @@ const Cart = () => {
                             </button>
                             <button
                                 onClick={() => navigate('/collections')}
-                                className="w-full mt-4 py-3 bg-indigo-600 text-white font-bold rounded-full text-lg hover:bg-indigo-700 transition-colors duration-300"
+                                className="w-full mt-4 py-3 bg-blue-600 text-white font-bold rounded-full text-lg hover:bg-blue-700 transition-colors duration-300"
                             >
                                 Continue Shopping
                             </button>

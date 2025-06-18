@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { database } from "./firebase";
-import { ref, onValue, query, orderByChild, equalTo, push, update, set, remove } from "firebase/database"; // Import 'remove' for wishlist removal
+import { ref, onValue, query, orderByChild, equalTo, push, update, set, remove } from "firebase/database";
 import { useNavigate } from "react-router-dom";
 import useAuthStatus from "./hooks/useAuthStatus";
 import loadScript from "./loadRazorpayScript";
@@ -27,12 +27,11 @@ const CategoryPage = ({ category }) => {
     const [loadingPincode, setLoadingPincode] = useState(false);
     const [pincodeError, setPincodeError] = useState('');
 
-    const [showSelectionModal, setShowSelectionModal] = useState(false); // New state for selection modal
-    const [userWishlist, setUserWishlist] = useState({}); // New state to store user's wishlist
+    const [showSelectionModal, setShowSelectionModal] = useState(false);
+    const [userWishlist, setUserWishlist] = useState({});
 
-    const RAZORPAY_KEY_ID = "rzp_test_Wj5c933q6luams";
+    const RAZORPAY_KEY_ID = "rzp_test_Wj5c933q6luams"; // Your Razorpay Key ID
 
-    // Effect for fetching products based on category
     useEffect(() => {
         setIsLoading(true);
         const productsRef = ref(database, "products");
@@ -51,23 +50,21 @@ const CategoryPage = ({ category }) => {
         return () => unsubscribe();
     }, [category]);
 
-    // Effect for fetching user's wishlist when logged in
     useEffect(() => {
         if (user && loggedIn) {
             const wishlistRef = ref(database, `wishlists/${user.uid}`);
             const unsubscribeWishlist = onValue(wishlistRef, (snapshot) => {
                 const data = snapshot.val();
-                setUserWishlist(data || {}); // Store the wishlist items
+                setUserWishlist(data || {});
             }, (error) => {
                 console.error("Error fetching wishlist:", error);
             });
             return () => unsubscribeWishlist();
         } else {
-            setUserWishlist({}); // Clear wishlist if not logged in
+            setUserWishlist({});
         }
     }, [user, loggedIn]);
 
-    // Effect for updating customer details if user object changes (e.g., after login)
     useEffect(() => {
         if (user) {
             setCustomerEmail(user.email || "");
@@ -125,7 +122,6 @@ const CategoryPage = ({ category }) => {
         }
     };
 
-    // --- NEW: Handle click on product to show selection modal ---
     const handleProductCardClick = (product) => {
         if (checkingStatus) {
             alert('Please wait while we check your login status.');
@@ -137,25 +133,20 @@ const CategoryPage = ({ category }) => {
             return;
         }
         setSelectedProduct(product);
-        setShowSelectionModal(true); // Show the new selection modal
+        setShowSelectionModal(true);
     };
 
-    // --- NEW: Handle Buy Now from selection modal ---
     const handleBuyNow = () => {
-        setShowSelectionModal(false); // Close selection modal
-        // The selectedProduct is already set from handleProductCardClick
+        setShowSelectionModal(false);
         setQuantity(1);
         setSize("M");
-        // Clear address fields for a new order. User data fields remain from useEffect.
         setPinCode("");
         setStateName("");
         setDistrict("");
         setVillage("");
         setPincodeError('');
-        // The main "Buy" modal will now open since selectedProduct is set
     };
 
-    // --- NEW: Handle Add to Wishlist from selection modal ---
     const handleAddToWishlist = async () => {
         if (!selectedProduct || !user?.uid) {
             alert("No product selected or user not logged in.");
@@ -165,7 +156,6 @@ const CategoryPage = ({ category }) => {
         const wishlistProductRef = ref(database, `wishlists/${user.uid}/${selectedProduct.id}`);
 
         try {
-            // Check if product is already in wishlist
             const snapshot = await onValue(wishlistProductRef, (snap) => snap.val(), { onlyOnce: true });
 
             if (snapshot.exists()) {
@@ -186,12 +176,11 @@ const CategoryPage = ({ category }) => {
             console.error("Error adding to wishlist:", error);
             alert("Failed to add product to wishlist. Please try again.");
         } finally {
-            setShowSelectionModal(false); // Close the selection modal
-            setSelectedProduct(null); // Clear selected product
+            setShowSelectionModal(false);
+            setSelectedProduct(null);
         }
     };
 
-    // Handler for initiating the Razorpay order
     const handleCreateOrder = async () => {
         setIsSubmitting(true);
 
@@ -331,7 +320,7 @@ const CategoryPage = ({ category }) => {
                 prefill: {
                     name: `${fullName.trim()} ${surname.trim()}`,
                     email: customerEmail.trim(),
-                    contact: "", // Populate if you collect phone number
+                    contact: "",
                 },
                 theme: {
                     color: "#3399cc",
@@ -380,7 +369,6 @@ const CategoryPage = ({ category }) => {
     const isSurnameReadOnly = loggedIn && user?.displayName && user.displayName.split(' ')[1];
     const isEmailReadOnly = loggedIn && user?.email;
 
-    // Check if the product is already in the wishlist for displaying the button text
     const isProductInWishlist = (productId) => {
         return userWishlist && userWishlist[productId] !== undefined;
     };
@@ -388,55 +376,55 @@ const CategoryPage = ({ category }) => {
 
     if (checkingStatus) {
         return (
-            <section className="bg-black min-h-screen py-16 px-5 font-poppins text-blue-100 flex justify-center items-center">
-                <p className="text-xl text-emerald-300">Checking authentication status...</p>
+            <section className="bg-white min-h-screen py-16 px-5 font-poppins text-gray-800 flex justify-center items-center">
+                <p className="text-xl text-emerald-600">Checking authentication status...</p>
             </section>
         );
     }
 
     if (!loggedIn) {
         return (
-            <section className="bg-black min-h-screen py-16 px-5 font-poppins text-blue-100 flex justify-center items-center">
-                <div className="text-center p-8 bg-gray-800 rounded-lg shadow-xl">
-                    <p className="text-2xl font-bold text-red-400 mb-6">You must be logged in to purchase products or add to wishlist.</p>
+            <section className="bg-white min-h-screen py-16 px-5 font-poppins text-gray-800 flex justify-center items-center">
+                <div className="text-center p-8 bg-gray-100 rounded-lg shadow-xl">
+                    <p className="text-2xl font-bold text-red-600 mb-6">You must be logged in to purchase products or add to wishlist.</p>
                     <button
                         onClick={() => navigate('/login')}
                         className="px-8 py-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors duration-300 transform hover:scale-105"
                     >
                         Go to Login Page
                     </button>
-                    <p className="mt-4 text-gray-400">If you don't have an account, you can register there.</p>
+                    <p className="mt-4 text-gray-600">If you don't have an account, you can register there.</p>
                 </div>
             </section>
         );
     }
 
     return (
-        <section className="bg-black min-h-screen py-16 px-5 font-poppins text-blue-100">
+        <section className="bg-white min-h-screen py-16 px-5 font-poppins text-gray-800">
             <div className="max-w-3xl mx-auto text-center mb-10">
-                <h1 className="text-4xl font-bold mb-3 text-emerald-300 capitalize">
+                <h1 className="text-4xl font-bold mb-3 text-emerald-700 capitalize">
                     {category.replace("-", " ")}
                 </h1>
-                <p className="text-lg text-slate-400">
+                <p className="text-lg text-slate-600">
                     Discover our latest {category.replace("-", " ")} products.
                 </p>
-                {loggedIn && <p className="text-sm text-gray-400 mt-2">Logged in as: {user?.email}</p>}
+                {loggedIn && <p className="text-sm text-gray-600 mt-2">Logged in as: {user?.email}</p>}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
                 {isLoading ? (
-                    <p className="text-slate-400 col-span-full text-center">
+                    <p className="text-slate-600 col-span-full text-center">
                         Loading products...
                     </p>
                 ) : products.length === 0 ? (
-                    <p className="text-slate-400 col-span-full text-center">
+                    <p className="text-slate-600 col-span-full text-center">
                         No products found in this category.
                     </p>
                 ) : (
                     products.map((product) => (
                         <div
                             key={product.id}
-                            className="relative bg-gray-800 rounded-3xl overflow-hidden shadow-lg shadow-emerald-700/30 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-emerald-700/60"
+                            className="relative bg-gray-100 rounded-3xl overflow-hidden shadow-lg shadow-emerald-300/30 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-emerald-300/60"
                             onClick={() => handleProductCardClick(product)}
                         >
                             {product.tag && (
@@ -457,13 +445,13 @@ const CategoryPage = ({ category }) => {
                             </div>
 
                             <div className="p-6">
-                                <h3 className="text-2xl mb-3 text-emerald-200 font-bold">
+                                <h3 className="text-2xl mb-3 text-emerald-600 font-bold">
                                     {product.title}
                                 </h3>
-                                <p className="text-base text-gray-300 leading-normal">
+                                <p className="text-base text-gray-600 leading-normal">
                                     Brand: {product.brand || "N/A"}
                                 </p>
-                                <p className="text-xl font-bold mt-2 text-emerald-50">
+                                <p className="text-xl font-bold mt-2 text-emerald-800">
                                     Price: ₹{product.price || "N/A"}
                                 </p>
                             </div>
@@ -475,14 +463,14 @@ const CategoryPage = ({ category }) => {
             {/* --- NEW: Product Selection Modal (Buy Now or Add to Wishlist) --- */}
             {showSelectionModal && selectedProduct && (
                 <div
-                    className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-5"
+                    className="fixed inset-0 bg-gray-800 bg-opacity-70 flex justify-center items-center z-50 p-5"
                     onClick={() => setShowSelectionModal(false)}
                 >
                     <div
-                        className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm text-white p-6 flex flex-col items-center"
+                        className="bg-gray-100 rounded-xl shadow-2xl w-full max-w-sm text-gray-800 p-6 flex flex-col items-center"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h2 className="text-2xl font-bold mb-4 text-center text-emerald-300">
+                        <h2 className="text-2xl font-bold mb-4 text-center text-emerald-700">
                             {selectedProduct.title}
                         </h2>
                         <img
@@ -491,21 +479,21 @@ const CategoryPage = ({ category }) => {
                             className="w-40 h-40 object-contain rounded-lg mb-6"
                             loading="lazy"
                         />
-                        <p className="text-xl font-bold mb-6 text-emerald-50">
+                        <p className="text-xl font-bold mb-6 text-emerald-800">
                             Price: ₹{selectedProduct.price || "N/A"}
                         </p>
 
                         <button
                             onClick={handleBuyNow}
-                            className="w-full bg-green-500 text-black py-3 rounded-full text-lg font-semibold mb-3 hover:bg-green-600 transition-colors duration-200"
+                            className="w-full bg-green-500 text-white py-3 rounded-full text-lg font-semibold mb-3 hover:bg-green-600 transition-colors duration-200"
                         >
                             Buy Now
                         </button>
                         <button
                             onClick={handleAddToWishlist}
                             className={`w-full py-3 rounded-full text-lg font-semibold transition-colors duration-200 ${isProductInWishlist(selectedProduct.id)
-                                    ? "bg-gray-600 text-white cursor-not-allowed"
-                                    : "bg-purple-600 text-white hover:bg-purple-700"
+                                ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                                : "bg-purple-600 text-white hover:bg-purple-700"
                                 }`}
                             disabled={isProductInWishlist(selectedProduct.id)}
                         >
@@ -514,7 +502,7 @@ const CategoryPage = ({ category }) => {
                         <button
                             onClick={() => {
                                 setShowSelectionModal(false);
-                                setSelectedProduct(null); // Clear selected product when closing
+                                setSelectedProduct(null);
                             }}
                             className="w-full bg-red-500 text-white py-3 rounded-full text-lg font-semibold mt-3 hover:bg-red-600 transition-colors duration-200"
                         >
@@ -527,21 +515,21 @@ const CategoryPage = ({ category }) => {
             {/* --- Existing Buy Modal (only shows if selectedProduct is set AND showSelectionModal is false) --- */}
             {selectedProduct && !showSelectionModal && (
                 <div
-                    className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-5"
+                    className="fixed inset-0 bg-gray-800 bg-opacity-70 flex justify-center items-center z-50 p-5"
                     onClick={() => !isSubmitting && setSelectedProduct(null)}
                 >
                     <div
-                        className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md text-white p-6 flex flex-col max-h-[90vh] overflow-y-auto"
+                        className="bg-gray-100 rounded-xl shadow-2xl w-full max-w-md text-gray-800 p-6 flex flex-col max-h-[90vh] overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <button
                             onClick={() => !isSubmitting && setSelectedProduct(null)}
-                            className="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl font-bold"
+                            className="absolute top-3 right-3 text-gray-400 hover:text-black text-2xl font-bold"
                             disabled={isSubmitting}
                         >
                             &times;
                         </button>
-                        <h2 className="text-3xl font-bold mb-5 text-center text-emerald-300">
+                        <h2 className="text-3xl font-bold mb-5 text-center text-emerald-700">
                             Buy {selectedProduct.title}
                         </h2>
                         <img
@@ -553,24 +541,24 @@ const CategoryPage = ({ category }) => {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                             <div>
-                                <label htmlFor="quantity" className="block text-sm font-semibold mb-1 text-gray-300">Quantity:</label>
+                                <label htmlFor="quantity" className="block text-sm font-semibold mb-1 text-gray-600">Quantity:</label>
                                 <input
                                     id="quantity"
                                     type="number"
                                     min="1"
                                     value={quantity}
                                     onChange={(e) => setQuantity(Number(e.target.value))}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 outline-none focus:border-emerald-500"
                                     required
                                 />
                             </div>
                             <div>
-                                <label htmlFor="size" className="block text-sm font-semibold mb-1 text-gray-300">Size:</label>
+                                <label htmlFor="size" className="block text-sm font-semibold mb-1 text-gray-600">Size:</label>
                                 <select
                                     id="size"
                                     value={size}
                                     onChange={(e) => setSize(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 outline-none focus:border-emerald-500"
                                     required
                                 >
                                     <option value="S">Small</option>
@@ -587,50 +575,50 @@ const CategoryPage = ({ category }) => {
                         {/* Customer Information Fields */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                             <div>
-                                <label htmlFor="fullName" className="block text-sm font-semibold mb-1 text-gray-300">First Name:</label>
+                                <label htmlFor="fullName" className="block text-sm font-semibold mb-1 text-gray-600">First Name:</label>
                                 <input
                                     id="fullName"
                                     type="text"
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 outline-none focus:border-emerald-500"
                                     required
                                     readOnly={isFullNameReadOnly}
                                 />
                                 {loggedIn && !isFullNameReadOnly && (
-                                    <p className="text-xs text-yellow-400 mt-1">Your display name is not set. Please fill this in.</p>
+                                    <p className="text-xs text-yellow-600 mt-1">Your display name is not set. Please fill this in.</p>
                                 )}
                             </div>
                             <div>
-                                <label htmlFor="surname" className="block text-sm font-semibold mb-1 text-gray-300">Last Name:</label>
+                                <label htmlFor="surname" className="block text-sm font-semibold mb-1 text-gray-600">Last Name:</label>
                                 <input
                                     id="surname"
                                     type="text"
                                     value={surname}
                                     onChange={(e) => setSurname(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 outline-none focus:border-emerald-500"
                                     required
                                     readOnly={isSurnameReadOnly}
                                 />
                                 {loggedIn && !isSurnameReadOnly && (
-                                    <p className="text-xs text-yellow-400 mt-1">Your display name is not set. Please fill this in.</p>
+                                    <p className="text-xs text-yellow-600 mt-1">Your display name is not set. Please fill this in.</p>
                                 )}
                             </div>
                             <div>
-                                <label htmlFor="customerEmail" className="block text-sm font-semibold mb-1 text-gray-300">Email:</label>
+                                <label htmlFor="customerEmail" className="block text-sm font-semibold mb-1 text-gray-600">Email:</label>
                                 <input
                                     id="customerEmail"
                                     type="email"
                                     value={customerEmail}
                                     onChange={(e) => setCustomerEmail(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 outline-none focus:border-emerald-500"
                                     required
                                     placeholder="yourname@example.com"
                                     readOnly={isEmailReadOnly}
                                 />
                             </div>
                             <div>
-                                <label htmlFor="pinCode" className="block text-sm font-semibold mb-1 text-gray-300">Pin Code:</label>
+                                <label htmlFor="pinCode" className="block text-sm font-semibold mb-1 text-gray-600">Pin Code:</label>
                                 <input
                                     id="pinCode"
                                     type="text"
@@ -638,68 +626,62 @@ const CategoryPage = ({ category }) => {
                                     onChange={(e) => setPinCode(e.target.value)}
                                     onBlur={fetchPincodeDetails}
                                     maxLength={6}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 outline-none focus:border-emerald-500"
                                     required
                                 />
-                                {loadingPincode && <p className="text-sm text-blue-400 mt-1">Fetching address details...</p>}
-                                {pincodeError && <p className="text-sm text-red-400 mt-1">{pincodeError}</p>}
+                                {loadingPincode && <p className="text-sm text-blue-600 mt-1">Fetching address details...</p>}
+                                {pincodeError && <p className="text-sm text-red-600 mt-1">{pincodeError}</p>}
                             </div>
                             <div>
-                                <label htmlFor="stateName" className="block text-sm font-semibold mb-1 text-gray-300">State:</label>
+                                <label htmlFor="stateName" className="block text-sm font-semibold mb-1 text-gray-600">State:</label>
                                 <input
                                     id="stateName"
                                     type="text"
                                     value={stateName}
                                     onChange={(e) => setStateName(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 outline-none focus:border-emerald-500"
                                     required
                                 />
-                                {pincodeError && !stateName && <p className="text-xs text-yellow-400 mt-1">Please fill State manually.</p>}
+                                {pincodeError && !stateName && <p className="text-xs text-yellow-600 mt-1">Please fill State manually.</p>}
                             </div>
                             <div>
-                                <label htmlFor="district" className="block text-sm font-semibold mb-1 text-gray-300">District:</label>
+                                <label htmlFor="district" className="block text-sm font-semibold mb-1 text-gray-600">District:</label>
                                 <input
                                     id="district"
                                     type="text"
                                     value={district}
                                     onChange={(e) => setDistrict(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 outline-none focus:border-emerald-500"
                                     required
                                 />
-                                {pincodeError && !district && <p className="text-xs text-yellow-400 mt-1">Please fill District manually.</p>}
+                                {pincodeError && !district && <p className="text-xs text-yellow-600 mt-1">Please fill District manually.</p>}
                             </div>
                             <div>
-                                <label htmlFor="village" className="block text-sm font-semibold mb-1 text-gray-300">Village:</label>
+                                <label htmlFor="village" className="block text-sm font-semibold mb-1 text-gray-600">Village/Town/City:</label>
                                 <input
                                     id="village"
                                     type="text"
                                     value={village}
                                     onChange={(e) => setVillage(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-800 outline-none focus:border-emerald-500"
                                     required
                                 />
-                                <p className="text-xs text-gray-400 mt-1">Enter your specific village/locality name (not auto-filled).</p>
                             </div>
                         </div>
 
-                        <p className="text-xl font-bold mb-6 text-emerald-50">
-                            Total Price: ₹{(selectedProduct.price * quantity).toFixed(2) || "N/A"}
-                        </p>
-
-                        <button
-                            onClick={handleCreateOrder}
-                            className="bg-green-500 text-black py-3 rounded-full text-lg font-semibold mb-3 hover:bg-green-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={isSubmitting || loadingPincode}
-                        >
-                            {isSubmitting ? "Processing Payment..." : "Confirm Purchase & Pay"}
-                        </button>
-                        <button
-                            onClick={() => setSelectedProduct(null)}
-                            className="bg-red-500 text-white py-3 rounded-full text-lg font-semibold hover:bg-red-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={isSubmitting}
-                        >
-                            Cancel
-                        </button>
+                        <div className="text-center mt-6">
+                            <p className="text-2xl font-bold mb-4 text-emerald-700">
+                                Total: ₹{(selectedProduct ? parseFloat(selectedProduct.price) * quantity : 0).toFixed(2)}
+                            </p>
+                            <button
+                                onClick={handleCreateOrder}
+                                className={`w-full py-3 rounded-full text-lg font-semibold transition-colors duration-200 ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                                    } text-white`}
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? "Processing Payment..." : "Proceed to Payment"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

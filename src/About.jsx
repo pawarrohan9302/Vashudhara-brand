@@ -1,31 +1,30 @@
-// src/components/About.jsx
 import React from "react";
 
 const About = () => {
     // Define primary and accent colors for easier modification
     const colors = {
-        backgroundDark: "#1a1a1a",
-        textLight: "#e0e0e0",
-        textMedium: "#d0d0d0",
-        textSubtle: "#c0c0c0",
-        vibrantGreen: "#34d399", // Main brand green
-        deepGreen: "#28a745",    // Deeper green for contrast/accents
-        brightGreen: "#6be097",  // Brighter green for highlights
-        cardDark: "#2a2a2a",
-        cardBorder: "#3a3a3a",
-        shadowColor: "rgba(0, 0, 0, 0.4)",
+        backgroundLight: "#ffffff", // Main background: white
+        textDark: "#333333",        // Main text color: dark grey
+        textMedium: "#555555",      // Slightly lighter text
+        textSubtle: "#777777",      // Subtle text for roles/descriptions
+        vibrantGreen: "#10B981",    // A strong green for titles and accents
+        deepGreen: "#059669",       // Deeper green for underlines/highlights
+        brightGreen: "#34D399",     // Brighter green for key highlights
+        cardLight: "#f9f9f9",       // Light grey for card backgrounds
+        cardBorder: "#e0e0e0",      // Light grey border for cards
+        shadowColor: "rgba(0, 0, 0, 0.1)", // Soft shadow for depth
     };
 
     // Main styles object for consistent design across the component
     const styles = {
         aboutSection: {
             padding: "80px 30px",
-            backgroundColor: colors.backgroundDark,
+            backgroundColor: colors.backgroundLight, // Set main background to white
             textAlign: "center",
             fontFamily: "'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-            color: colors.textLight,
+            color: colors.textDark, // Adjust text color for readability on white
             lineHeight: "1.7",
-            overflowX: "hidden", // Prevents horizontal scroll from potential content overflow
+            overflowX: "hidden",
         },
         title: {
             fontSize: "48px",
@@ -51,7 +50,7 @@ const About = () => {
         sectionHeading: {
             fontSize: "32px",
             fontWeight: "700",
-            color: colors.vibrantGreen,
+            color: colors.textDark, // Changed for better contrast on white
             marginTop: "50px",
             marginBottom: "25px",
             position: "relative",
@@ -74,11 +73,11 @@ const About = () => {
             margin: "0 auto 25px auto",
             textAlign: "left",
             padding: "0 15px",
-            color: colors.textMedium,
+            color: colors.textMedium, // Adjusted for readability
         },
         highlightText: {
             fontWeight: "700",
-            color: colors.brightGreen,
+            color: colors.deepGreen, // Ensure highlights stand out
         },
         contactLink: {
             color: colors.vibrantGreen,
@@ -103,49 +102,50 @@ const About = () => {
         teamName: {
             fontSize: "26px",
             fontWeight: "700",
-            color: colors.textLight,
+            color: colors.textDark, // Adjusted for readability
             marginBottom: "8px",
         },
         teamRole: {
             fontSize: "18px",
-            color: colors.textSubtle,
+            color: colors.textSubtle, // Adjusted for readability
         },
-        // --- Styles for Alternating Layout (keeping content left, image right consistent) ---
+        // --- Styles for Alternating Layout ---
         contentBlock: {
             display: "flex",
-            flexDirection: "column", // Default for mobile: stack content
+            flexDirection: "column",
             alignItems: "center",
             gap: "40px",
             maxWidth: "1100px",
             margin: "60px auto",
             padding: "0 20px",
-            textAlign: "left", // Text content aligns left within its block
+            textAlign: "left",
             "@media (min-width: 768px)": {
-                flexDirection: "row", // Desktop: row layout (content left, image right)
+                flexDirection: "row",
                 textAlign: "left",
             },
         },
         imageContainer: {
-            flex: "1", // Image takes up 1 part of available space
-            minWidth: "300px", // Minimum size for image on desktop
+            flex: "1",
+            minWidth: "300px",
             maxWidth: "500px",
             borderRadius: "10px",
-            overflow: "hidden", // Ensures image respects border-radius
+            overflow: "hidden",
             boxShadow: `0 10px 30px ${colors.shadowColor}`,
             transition: "transform 0.3s ease, box-shadow 0.3s ease",
         },
         blockImage: {
             width: "100%",
-            height: "auto", // Maintain aspect ratio
+            height: "auto",
             display: "block",
         },
         textContainer: {
-            flex: "1.5", // Text takes up more space than image
-            padding: "20px", // Padding inside the text block
-            backgroundColor: colors.cardDark,
+            flex: "1.5",
+            padding: "20px",
+            backgroundColor: colors.cardLight, // Light background for text blocks
             borderRadius: "10px",
             boxShadow: `0 8px 20px ${colors.shadowColor}`,
-            color: colors.textMedium,
+            color: colors.textMedium, // Text color inside blocks
+            border: `1px solid ${colors.cardBorder}`, // Subtle border for definition
         },
         blockHeading: {
             fontSize: "28px",
@@ -158,22 +158,22 @@ const About = () => {
             lineHeight: "1.6",
             marginBottom: "10px",
         },
-        // Styles for social media icons/images (aligned to the right as part of contentBlock)
         socialIcon: {
-            width: "150px", // Size of social media icons
+            width: "150px",
             height: "150px",
-            objectFit: "contain", // Ensure the full icon is visible
-            borderRadius: "10px", // Slightly rounded corners for the icons
+            objectFit: "contain",
+            borderRadius: "10px",
             boxShadow: `0 5px 15px ${colors.shadowColor}`,
         },
         socialTextContainer: {
             flex: "1.5",
             padding: "20px",
-            backgroundColor: colors.cardDark,
+            backgroundColor: colors.cardLight, // Light background for social text blocks
             borderRadius: "10px",
             boxShadow: `0 8px 20px ${colors.shadowColor}`,
-            color: colors.textMedium,
-            textAlign: "left", // Align text left within the block
+            color: colors.textMedium, // Text color inside blocks
+            textAlign: "left",
+            border: `1px solid ${colors.cardBorder}`, // Subtle border for definition
         }
     };
 
@@ -193,7 +193,10 @@ const About = () => {
 
             ---
 
-            ## Meet Our Founder
+            <h2 style={styles.sectionHeading}>
+                Meet Our Founder
+                <span style={styles.sectionHeadingUnderline}></span>
+            </h2>
             <div style={styles.singleTeamMember}>
                 <img
                     src="/rohn.jpg" // Founder's image
@@ -209,32 +212,41 @@ const About = () => {
 
             ---
 
+            <h2 style={styles.sectionHeading}>
+                Our Mission
+                <span style={styles.sectionHeadingUnderline}></span>
+            </h2>
             <div style={{
                 display: "flex",
                 flexDirection: "row",
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "1rem",
-                backgroundColor: "#000",
-                minHeight: "300px"
+                backgroundColor: colors.cardLight, // Changed to light card background
+                minHeight: "300px",
+                maxWidth: "1100px",
+                margin: "60px auto",
+                borderRadius: "10px",
+                boxShadow: `0 8px 20px ${colors.shadowColor}`,
+                border: `1px solid ${colors.cardBorder}` // Added a light border
             }}>
                 <div style={{
                     flex: 1,
                     paddingRight: "1rem",
-                    color: "#fff"
+                    color: colors.textMedium // Adjusted text color
                 }}>
                     <h3 style={{
                         fontSize: "1.5rem",
                         fontWeight: "bold",
                         marginBottom: "0.5rem",
-                        color: "#fff"
+                        color: colors.vibrantGreen // Adjusted heading color
                     }}>Our Mission</h3>
                     <p style={{
                         fontSize: "0.95rem",
                         lineHeight: "1.5",
-                        color: "#ccc"
+                        color: colors.textMedium // Adjusted text color
                     }}>
-                        Our mission is to <strong style={{ color: "#C19A6B", fontWeight: "bold" }}>empower every individual</strong> to express their unique style with confidence. We aim to provide a blend of modern trends and rich Indian tradition – especially through our <strong style={{ color: "#C19A6B", fontWeight: "bold" }}>stunning earrings, rings, and festive wear</strong>.
+                        Our mission is to <strong style={{ color: colors.highlightText, fontWeight: "bold" }}>empower every individual</strong> to express their unique style with confidence. We aim to provide a blend of modern trends and rich Indian tradition – especially through our <strong style={{ color: colors.highlightText, fontWeight: "bold" }}>stunning earrings, rings, and festive wear</strong>.
                     </p>
                 </div>
 
@@ -245,12 +257,19 @@ const About = () => {
                         width: "20%",
                         height: "20%",
                         borderRadius: "10px",
-                        filter: "brightness(30%)",
-                        marginLeft: "2rem"  // creates space between content and image
+                        filter: "none", // Removed dark filter for white background
+                        marginLeft: "2rem",
+                        border: `1px solid ${colors.cardBorder}` // Added a light border
                     }}
                 />
             </div>
 
+            ---
+
+            <h2 style={styles.sectionHeading}>
+                Our Vision
+                <span style={styles.sectionHeadingUnderline}></span>
+            </h2>
             <div style={styles.contentBlock}>
                 <div style={styles.textContainer}>
                     <h3 style={styles.blockHeading}>Our Vision</h3>
@@ -260,7 +279,7 @@ const About = () => {
                 </div>
                 <div style={styles.imageContainer}>
                     <img
-                        src="https://images.unsplash.com/photo-1621252873837-773a4b9c5f6e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w1MDcxMzJ8MHwxfHNlYXJjaHw4fHxmaW5lJTIwamV3ZWxsZXJ5fGVufDB8fHx8MTcxODUwNzE3MHww&ixlib=rb-4.0.3&q=80&w=1080" // Example image: fine jewelry/accessories
+                        src="https://images.unsplash.com/photo-1621252873837-773a4b9c5f6e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w1MDcxMzJ8MHwxfHNlYXJjaHw4fHxmaW5lJTIwamV3ZWxsZXJ5fGVufDB8fHx8MTcxODUwNzE3MHww&ixlib=rb-4.0.3&q=80&w=1080"
                         alt="Vashudhara Vision"
                         style={styles.blockImage}
                     />
@@ -269,7 +288,10 @@ const About = () => {
 
             ---
 
-            ## Why Trust Us?
+            <h2 style={styles.sectionHeading}>
+                Why Trust Us?
+                <span style={styles.sectionHeadingUnderline}></span>
+            </h2>
             <div style={styles.contentBlock}>
                 <div style={styles.textContainer}>
                     <p style={styles.blockText}>
@@ -287,7 +309,7 @@ const About = () => {
                 </div>
                 <div style={styles.imageContainer}>
                     <img
-                        src="https://images.unsplash.com/photo-1620799140403-edc65215099e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w1MDcxMzJ8MHwxfHNlYXJjaHw3OXx8cXVhbGl0eSUyMGluc3BlY3Rpb258ZW58MHx8fHwxNzE4Mzg2MzI2fDA&ixlib=rb-4.0.3&q=80&w=1080" // Example: quality inspection
+                        src="https://images.unsplash.com/photo-1620799140403-edc65215099e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w1MDcxMzJ8MHwxfHNlYXJjaHw3OXx8cXVhbGl0eSUyMGluc3BlY3Rpb258ZW58MHx8fHwxNzE4Mzg2MzI2fDA&ixlib=rb-4.0.3&q=80&w=1080"
                         alt="Quality Assurance"
                         style={styles.blockImage}
                     />
@@ -296,7 +318,10 @@ const About = () => {
 
             ---
 
-            ## Your Order, Your Convenience
+            <h2 style={styles.sectionHeading}>
+                Your Order, Your Convenience
+                <span style={styles.sectionHeadingUnderline}></span>
+            </h2>
             <p style={styles.paragraph}>
                 Shopping at Vashudhara is now even easier! In addition to our website, you can also place your orders via **Instagram and WhatsApp** at your convenience. We are committed to creating the best shopping experience for you.
             </p>
@@ -313,7 +338,7 @@ const About = () => {
                 </div>
                 <div style={{ flex: "0 0 auto", textAlign: "center" }}>
                     <img
-                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Instagram_logo_2016.svg/2048px-Instagram_logo_2016.svg.png" // High-res Instagram logo
+                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Instagram_logo_2016.svg/2048px-Instagram_logo_2016.svg.png"
                         alt="Instagram Logo"
                         style={styles.socialIcon}
                     />
@@ -332,7 +357,7 @@ const About = () => {
                 </div>
                 <div style={{ flex: "0 0 auto", textAlign: "center" }}>
                     <img
-                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/WhatsApp_logo.png/597px-WhatsApp_logo.png" // High-res WhatsApp logo
+                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/WhatsApp_logo.png/597px-WhatsApp_logo.png"
                         alt="WhatsApp Logo"
                         style={styles.socialIcon}
                     />

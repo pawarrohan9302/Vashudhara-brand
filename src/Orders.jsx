@@ -7,7 +7,7 @@ import { useAuthState } from "react-firebase-hooks/auth"; // Import useAuthState
 // --- Navigation Links Data for Customer Dashboard (with conceptual icons) ---
 const navLinks = [
     { label: "Overview", path: "/overview", icon: "📊" },
-    { label: "My Orders", path: "/orders", icon: "📦" },
+    { label: "My Orders", path: "/orders", icon: "📦" }, // Confirmed: This is for customers
     { label: "Collections & Wishlist", path: "/collections", icon: "❤️" },
     { label: "My Coupons", path: "/coupons", icon: "💸" },
     { label: "Vashudhra Credit", path: "/vashudhra-credit", icon: "💳" },
@@ -107,18 +107,18 @@ const Orders = () => {
     const getStatusInfo = (status) => {
         const lowerStatus = status ? status.toLowerCase() : "";
         if (lowerStatus.includes("canceled") || lowerStatus.includes("failed")) {
-            return { color: "#FF5555", icon: "❌" }; // Red, Cross icon
+            return { color: "#E53E3E", icon: "❌" }; // Red, Cross icon
         }
         if (lowerStatus.includes("delivered")) {
-            return { color: "#28a745", icon: "✅" }; // Green, Checkmark icon
+            return { color: "#38A169", icon: "✅" }; // Green, Checkmark icon
         }
         if (lowerStatus.includes("shipped") || lowerStatus.includes("dispatch")) {
-            return { color: "#FFC107", icon: "🚚" }; // Yellow/Orange, Truck icon
+            return { color: "#D69E2E", icon: "🚚" }; // Yellow/Orange, Truck icon
         }
         if (lowerStatus.includes("processing") || lowerStatus.includes("pending")) {
-            return { color: "#17A2B8", icon: "⏳" }; // Light Blue, Hourglass icon
+            return { color: "#3182CE", icon: "⏳" }; // Blue, Hourglass icon
         }
-        return { color: "#6C757D", icon: "ℹ️" }; // Default (Grey), Info icon
+        return { color: "#A0AEC0", icon: "ℹ️" }; // Default (Grey), Info icon
     };
 
     // --- Conditional Render for Authentication State ---
@@ -201,12 +201,12 @@ const Orders = () => {
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.transform = "translateY(-5px)";
                                         e.currentTarget.style.boxShadow =
-                                            "0 5px 20px rgba(0, 255, 255, 0.3)";
+                                            "0 5px 20px rgba(0, 150, 136, 0.3)"; // Teal shadow on hover
                                     }}
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.transform = "translateY(0)";
                                         e.currentTarget.style.boxShadow =
-                                            "0 0 15px rgba(0, 255, 255, 0.15)";
+                                            "0 2px 10px rgba(0, 0, 0, 0.1)"; // Default shadow
                                     }}
                                     onClick={() => navigate(`/order-details/${order.id}`)} // Navigate to a detailed order page
                                 >
@@ -290,12 +290,12 @@ const Orders = () => {
                             onClick={() => navigate("/")} // Navigate to your main shop page
                             style={styles.shopNowButton}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = "#00e6e6";
-                                e.currentTarget.style.boxShadow = "0 0 20px rgba(0, 255, 255, 0.7)";
+                                e.currentTarget.style.backgroundColor = "#009688"; // Darker teal on hover
+                                e.currentTarget.style.boxShadow = "0 0 20px rgba(0, 150, 136, 0.7)";
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = "#0ff";
-                                e.currentTarget.style.boxShadow = "0 0 15px rgba(0, 255, 255, 0.5)";
+                                e.currentTarget.style.backgroundColor = "#00B8D9"; // Default teal
+                                e.currentTarget.style.boxShadow = "0 0 15px rgba(0, 150, 136, 0.5)";
                             }}
                         >
                             Start Shopping Now!
@@ -314,17 +314,17 @@ const styles = {
     dashboardContainer: {
         display: "flex",
         minHeight: "100vh",
-        backgroundColor: "#000",
-        color: "#fff",
+        backgroundColor: "#F9FAFB", // Light background for the entire dashboard
+        color: "#1F2937", // Darker text for readability on white
         fontFamily: "Poppins, sans-serif",
         gap: "20px",
     },
     sidebar: {
         width: "280px",
-        backgroundColor: "#1a1a1a",
+        backgroundColor: "#FFFFFF", // White sidebar
         padding: "30px 20px",
-        borderRight: "1px solid #333",
-        boxShadow: "2px 0 10px rgba(0, 0, 0, 0.5)",
+        borderRight: "1px solid #E5E7EB", // Lighter border
+        boxShadow: "2px 0 10px rgba(0, 0, 0, 0.05)", // Softer shadow
         flexShrink: 0,
         position: "sticky",
         top: 0,
@@ -335,7 +335,7 @@ const styles = {
         marginBottom: "30px",
         textAlign: "center",
         paddingBottom: "20px",
-        borderBottom: "1px solid #333",
+        borderBottom: "1px solid #E5E7EB", // Lighter border
     },
     profileImage: {
         width: "80px",
@@ -343,41 +343,45 @@ const styles = {
         borderRadius: "50%",
         objectFit: "cover",
         marginBottom: "12px",
-        border: "3px solid #0ff",
-        boxShadow: "0 0 15px rgba(0, 255, 255, 0.4)",
+        border: "3px solid #00B8D9", // Teal border (consistent vibrant color)
+        boxShadow: "0 0 15px rgba(0, 150, 136, 0.2)", // Softer shadow for profile image
     },
     userEmail: {
         fontSize: "15px",
-        color: "#0ff",
+        color: "#4B5563", // Darker grey for email
         fontWeight: "600",
-        wordBreak: "break-word", // Prevents long emails from overflowing
+        wordBreak: "break-word",
     },
     accountHeading: {
         fontSize: "22px",
         marginBottom: "30px",
-        color: "#0ff",
-        textShadow: "0 0 5px #0ff",
+        color: "#00B8D9", // Teal heading color
+        textShadow: "none", // Remove text shadow for white background
     },
     navLink: {
         marginBottom: "15px",
         cursor: "pointer",
-        color: "#fff",
+        color: "#374151", // Dark grey for inactive links
         fontWeight: "400",
-        textDecoration: "none", // Default to no underline
+        textDecoration: "none",
         userSelect: "none",
         transition: "all 0.2s ease-in-out",
         display: "flex",
         alignItems: "center",
         gap: "10px",
-        padding: "8px 10px", // Added horizontal padding for better click area
+        padding: "8px 10px",
         borderRadius: "5px",
+        "&:hover": {
+            backgroundColor: "#F3F4F6", // Light hover background
+            color: "#00B8D9", // Teal on hover
+        },
     },
     navLinkActive: {
-        color: "#0ff",
+        color: "#00B8D9", // Teal for active link
         fontWeight: "700",
-        textDecoration: "underline", // Only underline active
+        textDecoration: "none", // Removed underline, active background is enough
         transform: "translateX(5px)",
-        backgroundColor: "rgba(0, 255, 255, 0.1)", // Subtle background for active link
+        backgroundColor: "rgba(0, 184, 217, 0.1)", // Subtle teal background for active link
     },
     navLinkIcon: {
         fontSize: "1.2em",
@@ -385,7 +389,7 @@ const styles = {
     logoutLink: {
         marginTop: "50px",
         cursor: "pointer",
-        color: "#ff5555",
+        color: "#EF4444", // Red for logout
         fontWeight: "700",
         userSelect: "none",
         transition: "color 0.2s ease-in-out",
@@ -394,21 +398,25 @@ const styles = {
         gap: "10px",
         padding: "8px 10px",
         borderRadius: "5px",
+        "&:hover": {
+            backgroundColor: "#FEF2F2", // Light red hover background
+        },
     },
     mainContent: {
         flex: 1,
         padding: "40px",
         overflowY: "auto",
+        backgroundColor: "#F9FAFB", // Consistent light background for content area
     },
     mainTitle: {
         fontSize: "32px",
         marginBottom: "35px",
-        textShadow: "0 0 8px #0ff, 0 0 15px #0ff",
-        color: "#0ff",
+        color: "#00B8D9", // Teal main title
+        textShadow: "none", // Remove text shadow
     },
     loadingState: {
         fontSize: "18px",
-        color: "#aaa",
+        color: "#4B5563", // Dark grey for loading text
         textAlign: "center",
         padding: "50px 0",
     },
@@ -426,52 +434,56 @@ const styles = {
         gap: "25px",
     },
     orderCard: {
-        backgroundColor: "#1a1a1a",
+        backgroundColor: "#FFFFFF", // White card background
         padding: "25px",
         borderRadius: "15px",
-        boxShadow: "0 0 15px rgba(0, 255, 255, 0.15)",
-        border: "1px solid #0ff5",
+        boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)", // Soft shadow
+        border: "1px solid #E5E7EB", // Light border
         transition: "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
         cursor: "pointer",
+        "&:hover": {
+            transform: "translateY(-5px)",
+            boxShadow: "0 5px 20px rgba(0, 150, 136, 0.2)", // Teal shadow on hover
+        },
     },
     orderHeader: {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         marginBottom: "15px",
-        flexWrap: "wrap", // Allow wrapping on smaller screens
+        flexWrap: "wrap",
     },
     orderId: {
-        color: "#0ff",
+        color: "#2563EB", // Blue for order ID
         fontSize: "1.4em",
         margin: 0,
     },
     orderStatusBadge: {
         padding: "8px 15px",
         borderRadius: "25px",
-        fontSize: "0.95em", // Slightly smaller for badges
+        fontSize: "0.95em",
         fontWeight: "bold",
-        color: "#000",
+        color: "#FFFFFF", // White text on status badge
         display: "flex",
         alignItems: "center",
         gap: "8px",
-        marginTop: "5px", // For wrapping
+        marginTop: "5px",
     },
     orderStatusIcon: {
         fontSize: "1.1em",
     },
     orderMeta: {
         fontSize: "0.95em",
-        color: "#ccc",
+        color: "#4B5563", // Dark grey for meta text
         marginBottom: "8px",
     },
     orderMetaLabel: {
         fontWeight: "600",
     },
     productsHeading: {
-        color: "#ccc",
+        color: "#4B5563", // Dark grey for product heading
         marginBottom: "10px",
-        borderBottom: "1px dashed #444",
+        borderBottom: "1px dashed #D1D5DB", // Lighter dashed border
         paddingBottom: "5px",
     },
     productsList: {
@@ -486,31 +498,34 @@ const styles = {
         gap: "15px",
         padding: "8px 0",
         transition: "background-color 0.1s ease-in-out",
+        "&:hover": {
+            backgroundColor: "#F9FAFB", // Very light hover for product items
+        },
     },
     productImage: {
         width: "80px",
         height: "80px",
         objectFit: "cover",
         borderRadius: "10px",
-        border: "1px solid #0ff5",
-        boxShadow: "0 0 8px rgba(0, 255, 255, 0.2)",
+        border: "1px solid #E5E7EB", // Light border for product images
+        boxShadow: "0 0 8px rgba(0, 0, 0, 0.05)", // Softer shadow
     },
     productDetails: {
         flexGrow: 1,
     },
     productName: {
         fontWeight: "600",
-        color: "#fff",
+        color: "#1F2937", // Dark text for product name
         fontSize: "1.1em",
         marginBottom: "5px",
     },
     productQuantityPrice: {
-        color: "#aaa",
+        color: "#4B5563", // Dark grey for quantity/price
         fontSize: "0.9em",
     },
     noProductsText: {
         fontSize: "14px",
-        color: "#aaa",
+        color: "#6B7280", // Medium grey for no products text
         listStyleType: "none",
     },
     noOrdersState: {
@@ -518,26 +533,31 @@ const styles = {
         padding: "50px",
     },
     noOrdersIcon: {
-        fontSize: "3em", // Larger icon
+        fontSize: "3em",
         display: "block",
         marginBottom: "15px",
+        color: "#6B7280", // Medium grey for empty state icon
     },
     noOrdersText: {
         fontSize: "20px",
-        color: "#aaa",
+        color: "#4B5563", // Dark grey for empty state text
         marginBottom: "20px",
     },
     shopNowButton: {
-        backgroundColor: "#0ff",
-        color: "#000",
+        backgroundColor: "#00B8D9", // Teal button
+        color: "#FFFFFF", // White text
         border: "none",
         padding: "12px 25px",
         borderRadius: "8px",
         fontSize: "18px",
         fontWeight: "600",
         cursor: "pointer",
-        boxShadow: "0 0 15px rgba(0, 255, 255, 0.5)",
+        boxShadow: "0 0 15px rgba(0, 150, 136, 0.5)", // Teal shadow
         transition: "all 0.3s ease-in-out",
+        "&:hover": {
+            backgroundColor: "#009688", // Darker teal on hover
+            boxShadow: "0 0 20px rgba(0, 150, 136, 0.7)",
+        },
     },
     authStatusContainer: {
         display: "flex",
@@ -545,20 +565,21 @@ const styles = {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        backgroundColor: "#000",
-        color: "#fff",
+        backgroundColor: "#F9FAFB", // White background for auth status
+        color: "#1F2937", // Dark text
         fontFamily: "Poppins, sans-serif",
         fontSize: "20px",
     },
     authStatusIcon: {
         fontSize: "3em",
         marginBottom: "20px",
+        color: "#4B5563", // Dark grey icon
     },
     authStatusText: {
         marginBottom: "15px",
     },
     retryButton: {
-        backgroundColor: "#007bff",
+        backgroundColor: "#2563EB", // Blue for retry button
         color: "#fff",
         border: "none",
         padding: "10px 20px",
@@ -566,5 +587,8 @@ const styles = {
         cursor: "pointer",
         fontSize: "16px",
         marginTop: "10px",
+        "&:hover": {
+            backgroundColor: "#1D4ED8", // Darker blue on hover
+        },
     },
 };

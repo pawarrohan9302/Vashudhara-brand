@@ -19,7 +19,6 @@ const Collections = () => {
     // However, we might want a local state just for the cart count in this component.
     const [cartItemCount, setCartItemCount] = useState(0);
 
-
     // Initialize state variables with logged-in user data if available
     const [fullName, setFullName] = useState(user?.displayName?.split(' ')[0] || "");
     const [surname, setSurname] = useState(user?.displayName?.split(' ')[1] || "");
@@ -398,39 +397,39 @@ const Collections = () => {
 
     if (checkingStatus) {
         return (
-            <section className="bg-black min-h-screen py-16 px-5 font-poppins text-blue-100 flex justify-center items-center">
-                <p className="text-xl text-emerald-300">Checking authentication status...</p>
+            <section className="bg-white min-h-screen py-16 px-5 font-poppins text-gray-800 flex justify-center items-center">
+                <p className="text-xl text-emerald-600">Checking authentication status...</p>
             </section>
         );
     }
 
     if (!loggedIn) {
         return (
-            <section className="bg-black min-h-screen py-16 px-5 font-poppins text-blue-100 flex justify-center items-center">
-                <div className="text-center p-8 bg-gray-800 rounded-lg shadow-xl">
-                    <p className="text-2xl font-bold text-red-400 mb-6">You must be logged in to access collections or add to cart.</p>
+            <section className="bg-white min-h-screen py-16 px-5 font-poppins text-gray-800 flex justify-center items-center">
+                <div className="text-center p-8 bg-gray-100 rounded-lg shadow-xl">
+                    <p className="text-2xl font-bold text-red-600 mb-6">You must be logged in to access collections or add to cart.</p>
                     <button
                         onClick={() => navigate('/login')}
                         className="px-8 py-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors duration-300 transform hover:scale-105"
                     >
                         Go to Login Page
                     </button>
-                    <p className="mt-4 text-gray-400">If you don't have an account, you can register there.</p>
+                    <p className="mt-4 text-gray-600">If you don't have an account, you can register there.</p>
                 </div>
             </section>
         );
     }
 
     return (
-        <section className="bg-black min-h-screen py-16 px-5 font-poppins text-blue-100">
+        <section className="bg-white min-h-screen py-16 px-5 font-poppins text-gray-800">
             <div className="max-w-3xl mx-auto text-center mb-10">
-                <h1 className="text-4xl font-bold mb-3 text-emerald-300 capitalize">
+                <h1 className="text-4xl font-bold mb-3 text-emerald-600 capitalize">
                     Our Collections
                 </h1>
-                <p className="text-lg text-slate-400">
+                <p className="text-lg text-gray-600">
                     Explore all our amazing products.
                 </p>
-                {loggedIn && <p className="text-sm text-gray-400 mt-2">Logged in as: {user?.email}</p>}
+                {loggedIn && <p className="text-sm text-gray-500 mt-2">Logged in as: {user?.email}</p>}
                 <div className="mt-4 text-right">
                     <button
                         onClick={() => navigate('/cart')}
@@ -443,18 +442,18 @@ const Collections = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
                 {isLoading ? (
-                    <p className="text-slate-400 col-span-full text-center">
+                    <p className="text-gray-600 col-span-full text-center">
                         Loading products...
                     </p>
                 ) : products.length === 0 ? (
-                    <p className="text-slate-400 col-span-full text-center">
+                    <p className="text-gray-600 col-span-full text-center">
                         No products found in our collection.
                     </p>
                 ) : (
                     products.map((product) => (
                         <div
                             key={product.id}
-                            className="relative bg-gray-800 rounded-3xl overflow-hidden shadow-lg shadow-emerald-700/30 transition-all duration-300 hover:scale-105 hover:shadow-emerald-700/60"
+                            className="relative bg-white rounded-3xl overflow-hidden shadow-lg shadow-emerald-300 transition-all duration-300 hover:scale-105 hover:shadow-emerald-500"
                         >
                             {product.tag && (
                                 <span className="absolute top-4 left-4 bg-green-500 text-white py-1.5 px-3 rounded-full text-xs font-bold uppercase tracking-wider z-10">
@@ -470,13 +469,13 @@ const Collections = () => {
                             />
 
                             <div className="p-6">
-                                <h3 className="text-2xl mb-3 text-emerald-200 font-bold">
+                                <h3 className="text-2xl mb-3 text-emerald-700 font-bold">
                                     {product.title}
                                 </h3>
-                                <p className="text-base text-gray-300 leading-normal">
+                                <p className="text-base text-gray-700 leading-normal">
                                     Brand: {product.brand || "N/A"}
                                 </p>
-                                <p className="text-xl font-bold mt-2 text-emerald-50">
+                                <p className="text-xl font-bold mt-2 text-gray-900">
                                     Price: ₹{product.price || "N/A"}
                                 </p>
                                 <div className="mt-4 flex flex-col sm:flex-row gap-3">
@@ -505,17 +504,17 @@ const Collections = () => {
                     onClick={() => !isSubmitting && setSelectedProduct(null)}
                 >
                     <div
-                        className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-md text-white p-6 flex flex-col max-h-[90vh] overflow-y-auto"
+                        className="bg-white rounded-xl shadow-2xl w-full max-w-md text-gray-900 p-6 flex flex-col max-h-[90vh] overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <button
                             onClick={() => !isSubmitting && setSelectedProduct(null)}
-                            className="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl font-bold"
+                            className="absolute top-3 right-3 text-gray-600 hover:text-gray-900 text-2xl font-bold"
                             disabled={isSubmitting}
                         >
                             &times;
                         </button>
-                        <h2 className="text-3xl font-bold mb-5 text-center text-emerald-300">
+                        <h2 className="text-3xl font-bold mb-5 text-center text-emerald-600">
                             Buy {selectedProduct.title}
                         </h2>
                         <img
@@ -527,24 +526,24 @@ const Collections = () => {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                             <div>
-                                <label htmlFor="quantity" className="block text-sm font-semibold mb-1 text-gray-300">Quantity:</label>
+                                <label htmlFor="quantity" className="block text-sm font-semibold mb-1 text-gray-700">Quantity:</label>
                                 <input
                                     id="quantity"
                                     type="number"
                                     min="1"
                                     value={quantity}
                                     onChange={(e) => setQuantity(Number(e.target.value))}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 outline-none focus:border-emerald-500"
                                     required
                                 />
                             </div>
                             <div>
-                                <label htmlFor="size" className="block text-sm font-semibold mb-1 text-gray-300">Size:</label>
+                                <label htmlFor="size" className="block text-sm font-semibold mb-1 text-gray-700">Size:</label>
                                 <select
                                     id="size"
                                     value={size}
                                     onChange={(e) => setSize(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 outline-none focus:border-emerald-500"
                                     required
                                 >
                                     {selectedProduct.sizes && selectedProduct.sizes.length > 0 ? (
@@ -565,50 +564,50 @@ const Collections = () => {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                             <div>
-                                <label htmlFor="fullName" className="block text-sm font-semibold mb-1 text-gray-300">First Name:</label>
+                                <label htmlFor="fullName" className="block text-sm font-semibold mb-1 text-gray-700">First Name:</label>
                                 <input
                                     id="fullName"
                                     type="text"
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 outline-none focus:border-emerald-500"
                                     required
                                     readOnly={isFullNameReadOnly}
                                 />
                                 {loggedIn && !isFullNameReadOnly && (
-                                    <p className="text-xs text-yellow-400 mt-1">Your display name is not set. Please fill this in.</p>
+                                    <p className="text-xs text-yellow-600 mt-1">Your display name is not set. Please fill this in.</p>
                                 )}
                             </div>
                             <div>
-                                <label htmlFor="surname" className="block text-sm font-semibold mb-1 text-gray-300">Last Name:</label>
+                                <label htmlFor="surname" className="block text-sm font-semibold mb-1 text-gray-700">Last Name:</label>
                                 <input
                                     id="surname"
                                     type="text"
                                     value={surname}
                                     onChange={(e) => setSurname(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 outline-none focus:border-emerald-500"
                                     required
                                     readOnly={isSurnameReadOnly}
                                 />
                                 {loggedIn && !isSurnameReadOnly && (
-                                    <p className="text-xs text-yellow-400 mt-1">Your display name is not set. Please fill this in.</p>
+                                    <p className="text-xs text-yellow-600 mt-1">Your display name is not set. Please fill this in.</p>
                                 )}
                             </div>
                             <div>
-                                <label htmlFor="customerEmail" className="block text-sm font-semibold mb-1 text-gray-300">Email:</label>
+                                <label htmlFor="customerEmail" className="block text-sm font-semibold mb-1 text-gray-700">Email:</label>
                                 <input
                                     id="customerEmail"
                                     type="email"
                                     value={customerEmail}
                                     onChange={(e) => setCustomerEmail(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 outline-none focus:border-emerald-500"
                                     required
                                     placeholder="yourname@example.com"
                                     readOnly={isEmailReadOnly}
                                 />
                             </div>
                             <div>
-                                <label htmlFor="pinCode" className="block text-sm font-semibold mb-1 text-gray-300">Pin Code:</label>
+                                <label htmlFor="pinCode" className="block text-sm font-semibold mb-1 text-gray-700">Pin Code:</label>
                                 <input
                                     id="pinCode"
                                     type="text"
@@ -616,67 +615,60 @@ const Collections = () => {
                                     onChange={(e) => setPinCode(e.target.value)}
                                     onBlur={fetchPincodeDetails}
                                     maxLength={6}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 outline-none focus:border-emerald-500"
                                     required
                                 />
-                                {loadingPincode && <p className="text-sm text-blue-400 mt-1">Fetching address details...</p>}
-                                {pincodeError && <p className="text-sm text-red-400 mt-1">{pincodeError}</p>}
+                                {loadingPincode && <p className="text-sm text-blue-600 mt-1">Fetching address details...</p>}
+                                {pincodeError && <p className="text-sm text-red-600 mt-1">{pincodeError}</p>}
                             </div>
                             <div>
-                                <label htmlFor="stateName" className="block text-sm font-semibold mb-1 text-gray-300">State:</label>
+                                <label htmlFor="stateName" className="block text-sm font-semibold mb-1 text-gray-700">State:</label>
                                 <input
                                     id="stateName"
                                     type="text"
                                     value={stateName}
                                     onChange={(e) => setStateName(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 outline-none focus:border-emerald-500"
                                     required
                                 />
-                                {pincodeError && !stateName && <p className="text-xs text-yellow-400 mt-1">Please fill State manually.</p>}
+                                {pincodeError && !stateName && <p className="text-xs text-yellow-600 mt-1">Please fill State manually.</p>}
                             </div>
                             <div>
-                                <label htmlFor="district" className="block text-sm font-semibold mb-1 text-gray-300">District:</label>
+                                <label htmlFor="district" className="block text-sm font-semibold mb-1 text-gray-700">District:</label>
                                 <input
                                     id="district"
                                     type="text"
                                     value={district}
                                     onChange={(e) => setDistrict(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 outline-none focus:border-emerald-500"
                                     required
                                 />
-                                {pincodeError && !district && <p className="text-xs text-yellow-400 mt-1">Please fill District manually.</p>}
+                                {pincodeError && !district && <p className="text-xs text-yellow-600 mt-1">Please fill District manually.</p>}
                             </div>
                             <div>
-                                <label htmlFor="village" className="block text-sm font-semibold mb-1 text-gray-300">Village:</label>
+                                <label htmlFor="village" className="block text-sm font-semibold mb-1 text-gray-700">Village/Locality:</label>
                                 <input
                                     id="village"
                                     type="text"
                                     value={village}
                                     onChange={(e) => setVillage(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-gray-600 bg-gray-900 text-white outline-none focus:border-emerald-500"
+                                    className="w-full p-2.5 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 outline-none focus:border-emerald-500"
                                     required
                                 />
-                                <p className="text-xs text-gray-400 mt-1">Enter your specific village/locality name (not auto-filled).</p>
                             </div>
                         </div>
 
-                        <p className="text-xl font-bold mb-6 text-emerald-50">
-                            Total Price: ₹{(selectedProduct.price * quantity).toFixed(2) || "N/A"}
-                        </p>
+                        <div className="flex justify-between items-center text-2xl font-bold mb-6 pt-4 border-t border-gray-200">
+                            <span>Total:</span>
+                            <span className="text-emerald-600">₹{(selectedProduct.price * quantity).toFixed(2)}</span>
+                        </div>
 
                         <button
                             onClick={handleCreateOrder}
-                            className="bg-green-500 text-black py-3 rounded-full text-lg font-semibold mb-3 hover:bg-green-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={isSubmitting || loadingPincode}
-                        >
-                            {isSubmitting ? "Processing Payment..." : "Confirm Purchase & Pay"}
-                        </button>
-                        <button
-                            onClick={() => setSelectedProduct(null)}
-                            className="bg-red-500 text-white py-3 rounded-full text-lg font-semibold hover:bg-red-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className={`w-full py-3 rounded-lg text-lg font-bold transition-colors duration-300 ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
                             disabled={isSubmitting}
                         >
-                            Cancel
+                            {isSubmitting ? "Processing Payment..." : "Proceed to Payment"}
                         </button>
                     </div>
                 </div>

@@ -50,12 +50,12 @@ const Hero = () => {
     return (
         <section
             style={{
-                backgroundImage:
-                    "linear-gradient(to right, rgba(0,0,0,0.85), rgba(15,23,42,0.85)), url('/HD.jpg')",
+                // Removed the linear-gradient overlay here
+                backgroundImage: "url('/HD.jpg')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",
-                color: "#fff",
+                color: "#fff", // Changed text color to white for better contrast with potentially dark image
                 padding: "160px 20px",
                 textAlign: "center",
                 borderBottom: "5px solid #34d399",
@@ -71,7 +71,7 @@ const Hero = () => {
                     fontSize: "clamp(2.5rem, 5vw, 3.5rem)",
                     fontWeight: "900",
                     marginBottom: "20px",
-                    textShadow: "3px 3px 15px rgba(0,0,0,0.8)",
+                    textShadow: "3px 3px 15px rgba(0,0,0,0.8)", // Adjusted text shadow for dark text
                     lineHeight: "1.1",
                     animation: "fadeInUp 1.5s ease forwards",
                 }}
@@ -84,7 +84,7 @@ const Hero = () => {
                     maxWidth: "620px",
                     margin: "0 auto",
                     lineHeight: "1.7",
-                    color: "#d1d5db",
+                    color: "#d1d5db", // Light text color for better readability on original image
                     fontFamily: "'Open Sans', sans-serif",
                     animation: "fadeInUp 1.7s ease forwards",
                 }}
@@ -122,17 +122,17 @@ const Hero = () => {
 const Categories = () => {
     // Updated order of categories as requested
     const categories = [
-        "Women's Earrings",           // 1st
-        "Rings",                      // 2nd
-        "Festive Mauve Lehenga Set ✨",// 3rd
-        "Accessories"                 // 4th
+        "Women's Earrings",
+        "Rings",
+        "Festive Mauve Lehenga Set ✨",
+        "Accessories"
     ];
     const hoverEffect = useHoverEffect();
 
     return (
         <section
             style={{
-                backgroundColor: "#0f172a",
+                backgroundColor: "#ffffff", // Changed to white
                 padding: "60px 20px",
                 textAlign: "center",
                 fontFamily: "'Poppins', sans-serif",
@@ -144,7 +144,7 @@ const Categories = () => {
                 style={{
                     fontSize: "clamp(2rem, 4vw, 2.5rem)",
                     fontWeight: "700",
-                    color: "#fff",
+                    color: "#1a202c", // Changed to dark for contrast
                     marginBottom: "50px",
                     animation: "fadeIn 1.5s ease forwards",
                     userSelect: "none",
@@ -202,7 +202,7 @@ const Categories = () => {
                             }}
                             {...hoverEffect}
                             style={{
-                                backgroundColor: "#1e293b",
+                                backgroundColor: "#edf2f7", // Light background for cards
                                 borderRadius: "16px",
                                 boxShadow: "0 6px 25px rgba(52, 211, 153, 0.3)",
                                 overflow: "hidden",
@@ -223,7 +223,7 @@ const Categories = () => {
                                     width: "100%",
                                     height: "100%",
                                     objectFit: "cover",
-                                    filter: "brightness(0.85)",
+                                    filter: "brightness(0.95)", // Slightly adjusted brightness
                                     transition: "transform 0.3s ease",
                                 }}
                             />
@@ -234,7 +234,7 @@ const Categories = () => {
                                     left: "50%",
                                     transform: "translateX(-50%)",
                                     padding: "12px 28px",
-                                    backgroundColor: "rgba(0, 0, 0, 0.7)",
+                                    backgroundColor: "rgba(255, 255, 255, 0.8)", // Adjusted for white background
                                     color: "#34d399",
                                     fontWeight: "700",
                                     fontSize: "1.3rem",
@@ -242,6 +242,7 @@ const Categories = () => {
                                     letterSpacing: "1.2px",
                                     pointerEvents: "none",
                                     userSelect: "none",
+                                    boxShadow: "0 4px 10px rgba(0,0,0,0.1)", // Added shadow for text clarity
                                 }}
                             >
                                 {category}
@@ -282,7 +283,7 @@ const WhyUs = () => {
         <section
             style={{
                 padding: "80px 20px",
-                backgroundColor: "#0f172a",
+                backgroundColor: "#ffffff", // Changed to white
                 textAlign: "center",
                 fontFamily: "'Poppins', sans-serif",
                 userSelect: "none",
@@ -292,7 +293,7 @@ const WhyUs = () => {
             <h2
                 style={{
                     fontSize: "clamp(2.25rem, 4vw, 2.5rem)",
-                    color: "#fff",
+                    color: "#1a202c", // Changed to dark for contrast
                     fontWeight: "700",
                     marginBottom: "50px",
                     animation: "fadeIn 1.5s ease forwards",
@@ -317,7 +318,7 @@ const WhyUs = () => {
                         tabIndex={0}
                         aria-label={`${item.title} feature`}
                         style={{
-                            backgroundColor: "#1e293b",
+                            backgroundColor: "#edf2f7", // Light background for cards
                             padding: "36px 24px",
                             borderRadius: "22px",
                             width: "300px",
@@ -325,7 +326,7 @@ const WhyUs = () => {
                             transition: "transform 0.3s ease, boxShadow 0.3s ease",
                             cursor: "pointer",
                             textAlign: "center",
-                            color: "#d1d5db",
+                            color: "#4a5568", // Changed to dark for contrast
                             outline: "none",
                             userSelect: "none",
                         }}
@@ -343,7 +344,7 @@ const WhyUs = () => {
                             style={{
                                 fontSize: "1.5rem",
                                 fontWeight: "700",
-                                color: "#fff",
+                                color: "#1a202c", // Changed to dark for contrast
                                 marginBottom: "15px",
                             }}
                         >
@@ -352,7 +353,7 @@ const WhyUs = () => {
                         <p
                             style={{
                                 fontSize: "1rem",
-                                color: "#cbd5e1",
+                                color: "#4a5568", // Changed to dark for contrast
                                 lineHeight: "1.7",
                                 fontFamily: "'Open Sans', sans-serif",
                             }}
@@ -370,7 +371,7 @@ const DeliveryGuarantee = () => {
     return (
         <section
             style={{
-                backgroundColor: "#000",
+                backgroundColor: "#ffffff", // Changed to white
                 padding: "60px 20px",
                 display: "flex",
                 justifyContent: "center",
@@ -381,12 +382,12 @@ const DeliveryGuarantee = () => {
             <div
                 style={{
                     maxWidth: "700px",
-                    backgroundColor: "#111827",
+                    backgroundColor: "#edf2f7", // Light background for the content box
                     borderRadius: "20px",
                     padding: "44px 36px",
                     boxShadow: "0 12px 38px rgba(52, 211, 153, 0.45)",
                     textAlign: "center",
-                    color: "#e0e7ff",
+                    color: "#1a202c", // Changed to dark for contrast
                     fontFamily: "'Poppins', sans-serif",
                     lineHeight: "1.75",
                     fontSize: "1.125rem",
@@ -406,7 +407,7 @@ const DeliveryGuarantee = () => {
                     our commitment to quality service means you can trust us to deliver
                     your products right to your doorstep, no matter where you are
                 </p>
-                <p style={{ marginTop: "24px", fontStyle: "italic", color: "#94a3b8" }}>
+                <p style={{ marginTop: "24px", fontStyle: "italic", color: "#4a5568" }}> {/* Darker italic text */}
                     Wherever you are, enjoy seamless doorstep delivery tailored for your
                     convenience.
                 </p>
@@ -420,8 +421,8 @@ const AboutUs = () => {
         <section
             style={{
                 padding: "80px 20px",
-                backgroundColor: "#0f172a",
-                color: "#cbd5e1",
+                backgroundColor: "#ffffff", // Changed to white
+                color: "#1a202c", // Changed to dark for contrast
                 textAlign: "center",
                 fontFamily: "'Poppins', sans-serif",
                 animation: "fadeIn 2s ease forwards",
@@ -446,6 +447,7 @@ const AboutUs = () => {
                     fontSize: "1.125rem",
                     lineHeight: "1.75",
                     fontFamily: "'Open Sans', sans-serif",
+                    color: "#4a5568", // Darker text color
                 }}
             >
                 Vashudhara is dedicated to bringing you the finest quality products with
@@ -462,8 +464,8 @@ const Footer = () => {
     return (
         <footer
             style={{
-                backgroundColor: "#000",
-                color: "#9ca3af",
+                backgroundColor: "#f7fafc", // Light background for the footer
+                color: "#4a5568", // Darker text color
                 padding: "40px 20px",
                 textAlign: "center",
                 fontFamily: "'Poppins', sans-serif",
@@ -476,7 +478,7 @@ const Footer = () => {
                     label: "Facebook",
                     icon: <FaFacebookF />
                 }, {
-                    href: "https://www.instagram.com/vashudharastore/", // Updated Instagram link
+                    href: "https://www.instagram.com/vashudharastore/",
                     label: "Instagram",
                     icon: <FaInstagram />
                 }, {
@@ -493,14 +495,14 @@ const Footer = () => {
                         {...hoverEffect}
                         style={{
                             margin: "0 14px",
-                            color: "#9ca3af",
+                            color: "#4a5568", // Darker icon color
                             fontSize: "24px",
                             transition: "color 0.3s ease",
                             outline: "none",
                             display: "inline-block",
                         }}
                         onFocus={(e) => (e.currentTarget.style.color = "#34d399")}
-                        onBlur={(e) => (e.currentTarget.style.color = "#9ca3af")}
+                        onBlur={(e) => (e.currentTarget.style.color = "#4a5568")}
                     >
                         {icon}
                     </a>

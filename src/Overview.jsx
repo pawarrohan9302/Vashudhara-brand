@@ -55,17 +55,17 @@ const Overview = () => {
         alignItems: "center",
         padding: "12px 16px",
         borderRadius: "8px",
-        color: "#fff",
+        color: "#000", // Text color changed to black for a white background
         cursor: "pointer",
         gap: "12px",
         transition: "background-color 0.3s",
     };
 
     const cardStyle = {
-        backgroundColor: "#111", // Darker background for cards
+        backgroundColor: "#f5f5f5", // Light grey background for cards
         padding: "20px",
         borderRadius: "15px",
-        boxShadow: "0 0 15px #0ff3", // Subtle cyan glow
+        boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)", // Subtle shadow
         maxWidth: "400px",
         marginBottom: "40px",
     };
@@ -145,14 +145,14 @@ const Overview = () => {
         <div
             style={sectionStyle}
             onClick={onClick}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#0ff1")} // Subtle hover background
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#e8e8e8")} // Subtle hover background
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
         >
-            <div style={{ color: "#0ff" }}>{icon}</div> {/* Cyan icon */}
+            <div style={{ color: "#007bff" }}>{icon}</div> {/* Blue icon for better contrast on white */}
             <div>
                 <div style={{ fontWeight: "600" }}>{label}</div>
                 {description && (
-                    <div style={{ fontSize: "13px", color: "#aaa" }}>{description}</div> // Lighter grey for description
+                    <div style={{ fontSize: "13px", color: "#666" }}>{description}</div> // Darker grey for description
                 )}
             </div>
         </div>
@@ -161,7 +161,7 @@ const Overview = () => {
     // --- Conditional Rendering for Loading/Authentication ---
     // Show a loading message while auth state is being determined
     if (authLoading) {
-        return <div style={{ backgroundColor: "#000", color: "#fff", minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "20px" }}>
+        return <div style={{ backgroundColor: "#fff", color: "#000", minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "20px" }}>
             <span style={{ marginRight: "10px" }}>⏳</span> Loading user data...
         </div>;
     }
@@ -169,15 +169,15 @@ const Overview = () => {
     // If no user is logged in (after authLoading is false), this check triggers redirection
     if (!user) {
         // Redirection is handled by useEffect, but this can be a temporary display
-        return <div style={{ backgroundColor: "#000", color: "#fff", minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "20px" }}>
+        return <div style={{ backgroundColor: "#fff", color: "#000", minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "20px" }}>
             Redirecting to login...
         </div>;
     }
 
     // --- Main Component Render ---
     return (
-        <div style={{ backgroundColor: "#000", color: "#fff", padding: "40px", fontFamily: "Poppins" }}>
-            <h2 style={{ fontSize: "26px", marginBottom: "20px", color: "#0ff", textShadow: "0 0 8px #0ff" }}>Account Overview</h2>
+        <div style={{ backgroundColor: "#fff", color: "#000", padding: "40px", fontFamily: "Poppins" }}>
+            <h2 style={{ fontSize: "26px", marginBottom: "20px", color: "#007bff", textShadow: "0 0 5px rgba(0, 123, 255, 0.2)" }}>Account Overview</h2>
 
             {/* User Profile Section with Current Image/Default */}
             <div style={{ display: "flex", alignItems: "center", marginBottom: "30px" }}>
@@ -192,20 +192,20 @@ const Overview = () => {
                         borderRadius: "50%",
                         marginRight: 15,
                         objectFit: "cover",
-                        border: "2px solid #0ff", // Cyan border for profile pic
-                        boxShadow: "0 0 10px #0ff4", // Subtle glow
+                        border: "2px solid #007bff", // Blue border for profile pic
+                        boxShadow: "0 0 8px rgba(0, 123, 255, 0.2)", // Subtle glow
                     }}
                 />
                 <div>
                     <h3>{user?.displayName || "Customer"}</h3>
-                    <p style={{ color: "#aaa" }}>{user?.email}</p>
+                    <p style={{ color: "#666" }}>{user?.email}</p>
                 </div>
             </div>
 
             {/* Edit Profile Image Section (Toggleable) */}
-            <div style={{ ...sectionStyle, justifyContent: "space-between", marginBottom: "30px", backgroundColor: "#111", borderRadius: "15px", boxShadow: "0 0 10px #0ff3" }}>
+            <div style={{ ...sectionStyle, justifyContent: "space-between", marginBottom: "30px", backgroundColor: "#f5f5f5", borderRadius: "15px", boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)" }}>
                 <div style={{ display: "flex", alignItems: "center" }}>
-                    <FaEdit style={{ marginRight: 10, color: "#0ff" }} />
+                    <FaEdit style={{ marginRight: 10, color: "#007bff" }} />
                     <span>Edit Profile Image</span>
                 </div>
                 <button
@@ -218,18 +218,18 @@ const Overview = () => {
                         }
                     }}
                     style={{
-                        backgroundColor: "#0ff",
+                        backgroundColor: "#007bff", // Blue button
                         border: "none",
                         borderRadius: "5px",
                         padding: "6px 12px",
                         cursor: "pointer",
-                        color: "#000",
+                        color: "#fff",
                         fontWeight: "bold",
                         transition: "background-color 0.2s, box-shadow 0.2s",
-                        boxShadow: "0 0 8px rgba(0, 255, 255, 0.4)",
+                        boxShadow: "0 0 8px rgba(0, 123, 255, 0.4)",
                     }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#00e6e6'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#0ff'}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0056b3'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#007bff'}
                 >
                     {editing ? "Cancel" : "Change Image"}
                 </button>
@@ -246,9 +246,9 @@ const Overview = () => {
                             flexGrow: 1,
                             padding: "10px",
                             borderRadius: "8px",
-                            border: "1px solid #0ff",
-                            backgroundColor: "#111",
-                            color: "#fff",
+                            border: "1px solid #007bff", // Blue border for input
+                            backgroundColor: "#fff", // White input background
+                            color: "#000", // Black text for input
                             cursor: "pointer",
                         }}
                     />
@@ -256,7 +256,7 @@ const Overview = () => {
                         onClick={handleUploadImage}
                         disabled={uploading || !image} // Disable if uploading or no image selected
                         style={{
-                            backgroundColor: uploading || !image ? "#555" : "#00ccff", // Grey out when uploading or no image
+                            backgroundColor: uploading || !image ? "#ccc" : "#28a745", // Green for upload, grey when disabled
                             border: "none",
                             borderRadius: "5px",
                             padding: "10px 15px",
@@ -264,10 +264,10 @@ const Overview = () => {
                             color: "#fff",
                             fontWeight: "bold",
                             transition: "background-color 0.2s, box-shadow 0.2s",
-                            boxShadow: uploading || !image ? "none" : "0 0 8px rgba(0, 204, 255, 0.4)",
+                            boxShadow: uploading || !image ? "none" : "0 0 8px rgba(40, 167, 69, 0.4)",
                         }}
-                        onMouseEnter={e => !uploading && !image && (e.currentTarget.style.backgroundColor = '#00ace6')}
-                        onMouseLeave={e => !uploading && !image && (e.currentTarget.style.backgroundColor = '#00ccff')}
+                        onMouseEnter={e => !uploading && !image && (e.currentTarget.style.backgroundColor = '#218838')}
+                        onMouseLeave={e => !uploading && !image && (e.currentTarget.style.backgroundColor = '#28a745')}
                     >
                         {uploading ? "Uploading..." : "Upload"}
                     </button>
@@ -348,18 +348,18 @@ const Overview = () => {
                 style={{
                     ...sectionStyle,
                     maxWidth: "400px",
-                    backgroundColor: "#111",
+                    backgroundColor: "#f5f5f5", // Light grey background for logout section
                     borderRadius: "15px",
-                    boxShadow: "0 0 15px #f003",
+                    boxShadow: "0 0 10px rgba(255, 0, 0, 0.1)", // Subtle red shadow
                     marginTop: "20px",
-                    color: "#f55", // Softer red for text
+                    color: "#dc3545", // Red color for logout text
                     fontWeight: "bold",
                     justifyContent: "center",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#220000")} // Darker red on hover
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#111")}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#ffebeb")} // Lighter red on hover
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
             >
-                <FaSignOutAlt style={{ marginRight: 10, color: '#f55' }} size={20} /> Logout
+                <FaSignOutAlt style={{ marginRight: 10, color: '#dc3545' }} size={20} /> Logout
             </div>
         </div>
     );
