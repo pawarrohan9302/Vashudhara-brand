@@ -4,26 +4,25 @@ import { ref, onValue } from "firebase/database";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthState } from "react-firebase-hooks/auth"; // Import useAuthState for robust auth management
 
-// --- Navigation Links Data for Customer Dashboard (with conceptual icons) ---
+// --- Navigation Links Data ---
 const navLinks = [
-    { label: "Overview", path: "/overview", icon: "📊" },
-    { label: "My Orders", path: "/orders", icon: "📦" },
-    { label: "Collections & Wishlist", path: "/collections", icon: "❤️" },
-    { label: "My Coupons", path: "/coupons", icon: "💸" },
-    { label: "Vashudhra Credit", path: "/vashudhra-credit", icon: "💳" },
-
-    { label: "Profile Details", path: "/profile-details", icon: "👤" },
-    { label: "Saved Cards", path: "/saved-cards", icon: "💳" },
-    { label: "Saved UPI", path: "/saved-upi", icon: "📱" },
-    { label: "Wallets/BNPL", path: "/wallets", icon: "👛" },
-    { label: "My Addresses", path: "/addresses", icon: "🏠" },
+    { label: "Overview", path: "/overview" },
+    { label: "Orders & Returns", path: "/orders" },
+    { label: "Collections & Wishlist", path: "/collections" },
+    { label: "Coupons", path: "/coupons" },
+    { label: "Vashudhra Credit", path: "/vashudhra-credit" },
+    { label: "MynCash", path: "/cash" },
+    { label: "Profile Details", path: "/profile-details" },
+    { label: "Saved Cards", path: "/saved-cards" },
+    { label: "Saved UPI", path: "/saved-upi" },
+    { label: "Wallets/BNPL", path: "/wallets" },
+    { label: "Addresses", path: "/addresses" },
 ];
 
 const Orders = () => {
     // --- State Variables ---
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true); // Manages loading state for orders data
-    const [authChecking, setAuthChecking] = useState(true); // New state to indicate initial auth check
     const [user, authLoading, authError] = useAuthState(auth); // Firebase auth state management
 
     // --- Hooks for Navigation and Location ---
@@ -32,275 +31,244 @@ const Orders = () => {
 
     // --- useEffect for Authentication and Data Fetching ---
     useEffect(() => {
-        // This effect runs only once on component mount to check auth status
-        if (!authLoading) {
-            setAuthChecking(false); // Auth check is complete
-            if (!user) {
-                console.log("No user logged in. Redirecting to /login.");
-                navigate("/login");
-            }
-        }
-    }, [user, authLoading, navigate]);
-
-    useEffect(() => {
-        if (authChecking || authLoading || !user) {
-            // Don't try to fetch data if auth is still being checked, loading, or no user
+        // Step 1: Handle Authentication State
+        if (authLoading) {
+            // Authentication state is still being determined (e.g., checking local storage for token)
+            // Do nothing until auth state is resolved.
             return;
         }
 
-        setLoading(true); // Start loading orders
+        if (authError) {
+            // An error occurred during authentication (e.g., network issues)
+            console.error("Authentication error:", authError);
+            setLoading(false); // Stop loading as we can't fetch data without auth
+            // Optionally, display an error message to the user
+            alert("Error checking user authentication. Please try again.");
+            return;
+        }
+
+        if (!user) {
+            // No user is logged in. Redirect to the login page.
+            console.log("No user logged in. Redirecting to /login.");
+            navigate("/login");
+            setLoading(false); // No user, so no orders to load
+            return;
+        }
+
+        // Step 2: User is logged in, now fetch their specific orders
+        // Set loading to true as we are about to start fetching data
+        setLoading(true);
+
+        // Define the Firebase Realtime Database reference for the current user's orders.
+        // This assumes your data structure is: /orders/{user.uid}/{order_id}
         const userOrdersRef = ref(database, `orders/${user.uid}`);
 
-        const unsubscribe = onValue(
-            userOrdersRef,
-            (snapshot) => {
-                const data = snapshot.val();
-                const loadedOrders = [];
+        // Set up a real-time listener for the user's orders.
+        // onValue will trigger initially with the data, and then again whenever data changes.
+        const unsubscribe = onValue(userOrdersRef, (snapshot) => {
+            const data = snapshot.val(); // Get the data object from the snapshot
+            const loadedOrders = [];
 
-                if (data) {
-                    Object.keys(data).forEach((key) => {
-                        loadedOrders.push({
-                            id: key,
-                            ...data[key],
-                        });
+            if (data) {
+                // If data exists, convert the Firebase object into an array of order objects.
+                Object.keys(data).forEach((key) => {
+                    loadedOrders.push({
+                        id: key, // Use the Firebase generated key (e.g., "-Mxyz123") as the unique order ID
+                        ...data[key], // Spread all other order details
                     });
-                }
-
-                // Sort orders by date in descending order (newest first)
-                loadedOrders.sort((a, b) => {
-                    const dateA = a.date ? new Date(a.date) : new Date(0);
-                    const dateB = b.date ? new Date(b.date) : new Date(0);
-                    return dateB.getTime() - dateA.getTime();
                 });
-
-                setOrders(loadedOrders);
-                setLoading(false);
-            },
-            (error) => {
-                console.error("Error fetching user orders from Firebase:", error);
-                setLoading(false);
-                alert(
-                    "Failed to load your orders. Please check your internet connection or try again."
-                );
             }
-        );
 
-        // Cleanup subscription on component unmount
+            // Sort orders by date in descending order (newest orders first).
+            // This ensures canceled orders also appear in their chronological place.
+            loadedOrders.sort((a, b) => {
+                const dateA = a.date ? new Date(a.date) : new Date(0); // Handle missing 'date' gracefully
+                const dateB = b.date ? new Date(b.date) : new Date(0); // Handle missing 'date' gracefully
+                return dateB.getTime() - dateA.getTime(); // Use getTime() for numeric comparison
+            });
+
+            setOrders(loadedOrders); // Update the state with the fetched and sorted orders
+            setLoading(false); // Data has been successfully loaded
+        }, (error) => {
+            // Error callback for onValue: handles any errors during data fetching
+            console.error("Error fetching user orders from Firebase:", error);
+            setLoading(false); // Stop loading on error
+            alert("Failed to load your orders. Please check your internet connection or try again.");
+        });
+
+        // Cleanup function for useEffect: This unsubscribes the Firebase listener
+        // when the component unmounts or its dependencies change. This is crucial
+        // to prevent memory leaks and unnecessary data fetches.
         return () => unsubscribe();
-    }, [user, authChecking, authLoading]); // Depend on user and auth check status
+    }, [user, authLoading, authError, navigate]); // Dependencies: re-run effect if these values change
 
     // --- Event Handler for Logout ---
     const handleLogout = async () => {
         try {
-            await auth.signOut();
-            navigate("/login");
+            await auth.signOut(); // Sign out the user from Firebase
+            navigate("/login"); // Redirect to the login page after logout
         } catch (error) {
             console.error("Error signing out:", error);
-            alert("Failed to log out. Please try again.");
+            alert("Failed to log out. Please try again."); // Inform the user about logout failure
         }
     };
 
     // --- Helper to determine active navigation link for styling ---
     const isActive = (path) => location.pathname === path;
 
-    // --- Helper to get status badge styling & icon ---
-    const getStatusInfo = (status) => {
-        const lowerStatus = status ? status.toLowerCase() : "";
-        if (lowerStatus.includes("canceled") || lowerStatus.includes("failed")) {
-            return { color: "#FF5555", icon: "❌" }; // Red, Cross icon
-        }
-        if (lowerStatus.includes("delivered")) {
-            return { color: "#28a745", icon: "✅" }; // Green, Checkmark icon
-        }
-        if (lowerStatus.includes("shipped") || lowerStatus.includes("dispatch")) {
-            return { color: "#FFC107", icon: "🚚" }; // Yellow/Orange, Truck icon
-        }
-        if (lowerStatus.includes("processing") || lowerStatus.includes("pending")) {
-            return { color: "#17A2B8", icon: "⏳" }; // Light Blue, Hourglass icon
-        }
-        return { color: "#6C757D", icon: "ℹ️" }; // Default (Grey), Info icon
-    };
-
-    // --- Conditional Render for Authentication State ---
-    if (authChecking || authLoading) {
-        return (
-            <div style={styles.authStatusContainer}>
-                <span style={styles.authStatusIcon}>🔒</span>
-                <p style={styles.authStatusText}>Checking authentication status...</p>
-            </div>
-        );
-    }
-
-    if (authError) {
-        return (
-            <div style={styles.authStatusContainer}>
-                <span style={styles.authStatusIcon}>⚠️</span>
-                <p style={styles.authStatusText}>Error: {authError.message}</p>
-                <button onClick={() => navigate("/login")} style={styles.retryButton}>
-                    Login Again
-                </button>
-            </div>
-        );
-    }
-
     return (
-        <div style={styles.dashboardContainer}>
+        <div
+            style={{
+                display: "flex",
+                minHeight: "100vh",
+                backgroundColor: "#000",
+                color: "#fff",
+                fontFamily: "Poppins, sans-serif",
+            }}
+        >
             {/* --- Sidebar Navigation --- */}
-            <aside style={styles.sidebar}>
-                {/* User Information Display */}
+            <aside
+                style={{
+                    width: "280px",
+                    backgroundColor: "#111",
+                    padding: "30px 20px",
+                    borderRight: "1px solid #222",
+                    zIndex: 2,
+                    position: "relative",
+                    flexShrink: 0, // Prevent sidebar from shrinking
+                }}
+            >
+                {/* User Information Display (if user is logged in) */}
                 {user && (
-                    <div style={styles.userInfo}>
+                    <div style={{ marginBottom: "30px", textAlign: "center" }}>
                         <img
-                            src={user.photoURL || "https://i.imgur.com/6VBx3io.png"}
+                            src={user.photoURL || "https://i.imgur.com/6VBx3io.png"} // Fallback image if user has no photo
                             alt="Profile"
-                            style={styles.profileImage}
+                            style={{
+                                width: "70px",
+                                height: "70px",
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                marginBottom: "10px",
+                                border: "2px solid #0ff", // Add a subtle border
+                            }}
                         />
-                        <p style={styles.userEmail}>{user.email}</p>
+                        <p style={{ fontSize: "14px", color: "#0ff" }}>{user.email}</p>
                     </div>
                 )}
 
-                <h3 style={styles.accountHeading}>My Account</h3>
+                <h3 style={{ fontSize: "20px", marginBottom: "30px", color: "#0ff" }}>
+                    Account
+                </h3>
 
                 {/* Navigation Links Mapping */}
                 <nav>
-                    {navLinks.map(({ label, path, icon }) => (
+                    {navLinks.map(({ label, path }) => (
                         <p
                             key={path}
                             onClick={() => navigate(path)}
-                            style={{ ...styles.navLink, ...(isActive(path) && styles.navLinkActive) }}
+                            style={{
+                                marginBottom: "14px",
+                                cursor: "pointer",
+                                color: isActive(path) ? "#0ff" : "#fff",
+                                fontWeight: isActive(path) ? "600" : "400",
+                                textDecoration: isActive(path) ? "underline" : "none",
+                                userSelect: "none",
+                                transition: "color 0.2s, font-weight 0.2s, text-decoration 0.2s" // Smooth transitions
+                            }}
                         >
-                            <span style={styles.navLinkIcon}>{icon}</span> {label}
+                            {label}
                         </p>
                     ))}
 
                     {/* Logout Link */}
-                    <p onClick={handleLogout} style={styles.logoutLink}>
-                        <span style={styles.navLinkIcon}>➡️</span> Logout
+                    <p
+                        onClick={handleLogout}
+                        style={{
+                            marginTop: "40px",
+                            cursor: "pointer",
+                            color: "#ff5555",
+                            fontWeight: "600",
+                            userSelect: "none",
+                            transition: "color 0.2s" // Smooth transition for logout
+                        }}
+                    >
+                        Logout
                     </p>
                 </nav>
             </aside>
 
             {/* --- Main Content Area for Orders --- */}
-            <main style={styles.mainContent}>
-                <h2 style={styles.mainTitle}>My Orders</h2>
+            <main style={{ flex: 1, padding: "40px", overflowY: "auto" }}>
+                <h2
+                    style={{
+                        fontSize: "28px",
+                        marginBottom: "30px",
+                        textShadow: "0 0 5px #0ff", // Neon glow effect for title
+                    }}
+                >
+                    My Orders
+                </h2>
 
                 {/* Conditional Rendering: Loading, No Orders, or Display Orders */}
                 {loading ? (
-                    <div style={styles.loadingState}>
-                        <span style={styles.loadingIcon}>⏳</span>
-                        <p style={styles.loadingText}>Loading your orders...</p>
-                    </div>
+                    <p style={{ fontSize: "16px", color: "#aaa" }}>Loading your orders...</p>
                 ) : orders.length > 0 ? (
-                    <div style={styles.ordersGrid}>
-                        {orders.map((order) => {
-                            const statusInfo = getStatusInfo(order.status);
-                            return (
-                                <div
-                                    key={order.id || order.orderId || Math.random()} // Fallback key
-                                    style={styles.orderCard}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = "translateY(-5px)";
-                                        e.currentTarget.style.boxShadow =
-                                            "0 5px 20px rgba(0, 255, 255, 0.3)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = "translateY(0)";
-                                        e.currentTarget.style.boxShadow =
-                                            "0 0 15px rgba(0, 255, 255, 0.15)";
-                                    }}
-                                    onClick={() => navigate(`/order-details/${order.id}`)} // Navigate to a detailed order page
-                                >
-                                    <div style={styles.orderHeader}>
-                                        <h3 style={styles.orderId}>
-                                            Order #{order.orderId || order.id || "N/A"}
-                                        </h3>
-                                        {order.status && (
-                                            <span
-                                                style={{
-                                                    ...styles.orderStatusBadge,
-                                                    backgroundColor: statusInfo.color,
-                                                }}
-                                            >
-                                                <span style={styles.orderStatusIcon}>
-                                                    {statusInfo.icon}
-                                                </span>{" "}
-                                                {order.status}
-                                            </span>
-                                        )}
-                                    </div>
+                    <div style={{ display: "grid", gap: "20px" }}>
+                        {orders.map((order) => (
+                            <div
+                                // Use order.id (Firebase key) for unique key. Fallback to order.orderId or Math.random().
+                                key={order.id || order.orderId || Math.random()}
+                                style={{
+                                    backgroundColor: "#111",
+                                    padding: "20px",
+                                    borderRadius: "12px",
+                                    boxShadow: "0 0 10px rgba(0, 255, 255, 0.2)", // Subtle glow effect
+                                    border: "1px solid #0ff3", // Light border to match theme
+                                }}
+                            >
+                                <h3 style={{ marginBottom: "10px", color: "#0ff" }}>
+                                    Order #{order.orderId || order.id || 'N/A'} {/* Display unique order ID */}
+                                </h3>
+                                <p>Date: {order.date ? new Date(order.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "N/A"}</p>
+                                <p>Total: ₹{order.total != null ? order.total.toFixed(2) : "N/A"}</p>
 
-                                    <p style={styles.orderMeta}>
-                                        <span style={styles.orderMetaLabel}>Order Date:</span>{" "}
-                                        {order.date
-                                            ? new Date(order.date).toLocaleDateString("en-IN", {
-                                                year: "numeric",
-                                                month: "long",
-                                                day: "numeric",
-                                                hour: "2-digit",
-                                                minute: "2-digit",
-                                            })
-                                            : "N/A"}
+                                {/* Display Order Status with conditional styling */}
+                                {order.status && (
+                                    <p
+                                        style={{
+                                            marginTop: "15px",
+                                            fontSize: "15px",
+                                            fontWeight: "bold",
+                                            // Dynamic color based on status for better visibility
+                                            color: order.status.toLowerCase().includes('canceled') ? '#ff5555' :
+                                                order.status.toLowerCase().includes('failed') ? '#ff5555' :
+                                                    order.status.toLowerCase().includes('delivered') ? '#00ff00' :
+                                                        '#0ff', // Default for other statuses
+                                        }}
+                                    >
+                                        Status: {order.status}
                                     </p>
-                                    <p style={styles.orderMeta}>
-                                        <span style={styles.orderMetaLabel}>Total Amount:</span>{" "}
-                                        ₹{order.total != null ? order.total.toFixed(2) : "N/A"}
-                                    </p>
+                                )}
 
-                                    <h4 style={styles.productsHeading}>Products:</h4>
-                                    <ul style={styles.productsList}>
-                                        {order.items && Array.isArray(order.items) && order.items.length > 0 ? (
-                                            order.items.map((item, i) => (
-                                                <li key={i} style={styles.productItem}>
-                                                    {item.imageUrl && (
-                                                        <img
-                                                            src={item.imageUrl}
-                                                            alt={item.name || item.title || "Product"}
-                                                            style={styles.productImage}
-                                                        />
-                                                    )}
-                                                    <div style={styles.productDetails}>
-                                                        <p style={styles.productName}>
-                                                            {item.name || item.title || "Product Name"}
-                                                        </p>
-                                                        <p style={styles.productQuantityPrice}>
-                                                            Quantity: {item.quantity || 1} | Price: ₹
-                                                            {item.price != null
-                                                                ? item.price.toFixed(2)
-                                                                : "N/A"}{" "}
-                                                            each
-                                                        </p>
-                                                    </div>
-                                                </li>
-                                            ))
-                                        ) : (
-                                            <li style={styles.noProductsText}>
-                                                No products found for this order.
+                                <h4 style={{ marginTop: "15px", marginBottom: "8px", color: "#ccc" }}>Items:</h4>
+                                <ul>
+                                    {order.items && Array.isArray(order.items) && order.items.length > 0 ? (
+                                        order.items.map((item, i) => (
+                                            <li key={i} style={{ marginBottom: "5px", fontSize: "14px", listStyleType: "disc", marginLeft: "20px" }}>
+                                                {item.name} x {item.quantity} (₹{item.price != null ? item.price.toFixed(2) : "N/A"} each)
                                             </li>
-                                        )}
-                                    </ul>
-                                </div>
-                            );
-                        })}
+                                        ))
+                                    ) : (
+                                        <li style={{ fontSize: "14px", color: "#aaa" }}>No items found for this order.</li>
+                                    )}
+                                </ul>
+                                {/* You can add more details like delivery address, tracking info etc. here */}
+                            </div>
+                        ))}
                     </div>
                 ) : (
-                    <div style={styles.noOrdersState}>
-                        <span style={styles.noOrdersIcon}>🛒</span>
-                        <p style={styles.noOrdersText}>You haven't placed any orders yet.</p>
-                        <button
-                            onClick={() => navigate("/")} // Navigate to your main shop page
-                            style={styles.shopNowButton}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = "#00e6e6";
-                                e.currentTarget.style.boxShadow = "0 0 20px rgba(0, 255, 255, 0.7)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = "#0ff";
-                                e.currentTarget.style.boxShadow = "0 0 15px rgba(0, 255, 255, 0.5)";
-                            }}
-                        >
-                            Start Shopping Now!
-                        </button>
-                    </div>
+                    <p style={{ fontSize: "16px", color: "#aaa" }}>You haven't placed any orders yet.</p>
                 )}
             </main>
         </div>
@@ -308,263 +276,3 @@ const Orders = () => {
 };
 
 export default Orders;
-
-// --- Consolidated Styles for Readability ---
-const styles = {
-    dashboardContainer: {
-        display: "flex",
-        minHeight: "100vh",
-        backgroundColor: "#000",
-        color: "#fff",
-        fontFamily: "Poppins, sans-serif",
-        gap: "20px",
-    },
-    sidebar: {
-        width: "280px",
-        backgroundColor: "#1a1a1a",
-        padding: "30px 20px",
-        borderRight: "1px solid #333",
-        boxShadow: "2px 0 10px rgba(0, 0, 0, 0.5)",
-        flexShrink: 0,
-        position: "sticky",
-        top: 0,
-        height: "100vh",
-        overflowY: "auto",
-    },
-    userInfo: {
-        marginBottom: "30px",
-        textAlign: "center",
-        paddingBottom: "20px",
-        borderBottom: "1px solid #333",
-    },
-    profileImage: {
-        width: "80px",
-        height: "80px",
-        borderRadius: "50%",
-        objectFit: "cover",
-        marginBottom: "12px",
-        border: "3px solid #0ff",
-        boxShadow: "0 0 15px rgba(0, 255, 255, 0.4)",
-    },
-    userEmail: {
-        fontSize: "15px",
-        color: "#0ff",
-        fontWeight: "600",
-        wordBreak: "break-word", // Prevents long emails from overflowing
-    },
-    accountHeading: {
-        fontSize: "22px",
-        marginBottom: "30px",
-        color: "#0ff",
-        textShadow: "0 0 5px #0ff",
-    },
-    navLink: {
-        marginBottom: "15px",
-        cursor: "pointer",
-        color: "#fff",
-        fontWeight: "400",
-        textDecoration: "none", // Default to no underline
-        userSelect: "none",
-        transition: "all 0.2s ease-in-out",
-        display: "flex",
-        alignItems: "center",
-        gap: "10px",
-        padding: "8px 10px", // Added horizontal padding for better click area
-        borderRadius: "5px",
-    },
-    navLinkActive: {
-        color: "#0ff",
-        fontWeight: "700",
-        textDecoration: "underline", // Only underline active
-        transform: "translateX(5px)",
-        backgroundColor: "rgba(0, 255, 255, 0.1)", // Subtle background for active link
-    },
-    navLinkIcon: {
-        fontSize: "1.2em",
-    },
-    logoutLink: {
-        marginTop: "50px",
-        cursor: "pointer",
-        color: "#ff5555",
-        fontWeight: "700",
-        userSelect: "none",
-        transition: "color 0.2s ease-in-out",
-        display: "flex",
-        alignItems: "center",
-        gap: "10px",
-        padding: "8px 10px",
-        borderRadius: "5px",
-    },
-    mainContent: {
-        flex: 1,
-        padding: "40px",
-        overflowY: "auto",
-    },
-    mainTitle: {
-        fontSize: "32px",
-        marginBottom: "35px",
-        textShadow: "0 0 8px #0ff, 0 0 15px #0ff",
-        color: "#0ff",
-    },
-    loadingState: {
-        fontSize: "18px",
-        color: "#aaa",
-        textAlign: "center",
-        padding: "50px 0",
-    },
-    loadingIcon: {
-        marginRight: "10px",
-        fontSize: "2em",
-        display: "block",
-        marginBottom: "10px",
-    },
-    loadingText: {
-        fontSize: "1.2em",
-    },
-    ordersGrid: {
-        display: "grid",
-        gap: "25px",
-    },
-    orderCard: {
-        backgroundColor: "#1a1a1a",
-        padding: "25px",
-        borderRadius: "15px",
-        boxShadow: "0 0 15px rgba(0, 255, 255, 0.15)",
-        border: "1px solid #0ff5",
-        transition: "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
-        cursor: "pointer",
-    },
-    orderHeader: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "15px",
-        flexWrap: "wrap", // Allow wrapping on smaller screens
-    },
-    orderId: {
-        color: "#0ff",
-        fontSize: "1.4em",
-        margin: 0,
-    },
-    orderStatusBadge: {
-        padding: "8px 15px",
-        borderRadius: "25px",
-        fontSize: "0.95em", // Slightly smaller for badges
-        fontWeight: "bold",
-        color: "#000",
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        marginTop: "5px", // For wrapping
-    },
-    orderStatusIcon: {
-        fontSize: "1.1em",
-    },
-    orderMeta: {
-        fontSize: "0.95em",
-        color: "#ccc",
-        marginBottom: "8px",
-    },
-    orderMetaLabel: {
-        fontWeight: "600",
-    },
-    productsHeading: {
-        color: "#ccc",
-        marginBottom: "10px",
-        borderBottom: "1px dashed #444",
-        paddingBottom: "5px",
-    },
-    productsList: {
-        listStyle: "none",
-        padding: 0,
-        margin: 0,
-    },
-    productItem: {
-        marginBottom: "10px",
-        display: "flex",
-        alignItems: "center",
-        gap: "15px",
-        padding: "8px 0",
-        transition: "background-color 0.1s ease-in-out",
-    },
-    productImage: {
-        width: "80px",
-        height: "80px",
-        objectFit: "cover",
-        borderRadius: "10px",
-        border: "1px solid #0ff5",
-        boxShadow: "0 0 8px rgba(0, 255, 255, 0.2)",
-    },
-    productDetails: {
-        flexGrow: 1,
-    },
-    productName: {
-        fontWeight: "600",
-        color: "#fff",
-        fontSize: "1.1em",
-        marginBottom: "5px",
-    },
-    productQuantityPrice: {
-        color: "#aaa",
-        fontSize: "0.9em",
-    },
-    noProductsText: {
-        fontSize: "14px",
-        color: "#aaa",
-        listStyleType: "none",
-    },
-    noOrdersState: {
-        textAlign: "center",
-        padding: "50px",
-    },
-    noOrdersIcon: {
-        fontSize: "3em", // Larger icon
-        display: "block",
-        marginBottom: "15px",
-    },
-    noOrdersText: {
-        fontSize: "20px",
-        color: "#aaa",
-        marginBottom: "20px",
-    },
-    shopNowButton: {
-        backgroundColor: "#0ff",
-        color: "#000",
-        border: "none",
-        padding: "12px 25px",
-        borderRadius: "8px",
-        fontSize: "18px",
-        fontWeight: "600",
-        cursor: "pointer",
-        boxShadow: "0 0 15px rgba(0, 255, 255, 0.5)",
-        transition: "all 0.3s ease-in-out",
-    },
-    authStatusContainer: {
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
-        backgroundColor: "#000",
-        color: "#fff",
-        fontFamily: "Poppins, sans-serif",
-        fontSize: "20px",
-    },
-    authStatusIcon: {
-        fontSize: "3em",
-        marginBottom: "20px",
-    },
-    authStatusText: {
-        marginBottom: "15px",
-    },
-    retryButton: {
-        backgroundColor: "#007bff",
-        color: "#fff",
-        border: "none",
-        padding: "10px 20px",
-        borderRadius: "5px",
-        cursor: "pointer",
-        fontSize: "16px",
-        marginTop: "10px",
-    },
-};

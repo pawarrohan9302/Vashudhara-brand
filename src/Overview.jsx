@@ -1,10 +1,6 @@
-import React, { useEffect, useState } from "react";
-// Import auth and storage from your firebase config
-import { auth, storage } from "./firebase"; // Ensure correct import from your firebase.js
+import React, { useState } from "react";
+import { auth } from "./firebase";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { updateProfile } from "firebase/auth"; // Import updateProfile from firebase/auth
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Import storage functions
-
 import {
     FaUser, FaBoxOpen, FaHeart, FaCreditCard, FaMoneyBill,
     FaMapMarkerAlt, FaTag, FaSignOutAlt, FaQrcode, FaEdit
@@ -12,44 +8,12 @@ import {
 import { useNavigate } from "react-router-dom";
 
 const Overview = () => {
-    // --- State Variables ---
-    const [user, authLoading, authError] = useAuthState(auth); // Firebase auth state, loading, and error
-    const [image, setImage] = useState(null); // Holds the File object of the selected image
-    const [preview, setPreview] = useState(null); // Holds the URL for image preview (local or Firebase)
-    const [editing, setEditing] = useState(false); // Controls visibility of the image upload section
-    const [uploading, setUploading] = useState(false); // Indicates if an upload is in progress
+    const [user] = useAuthState(auth);
+    const [image, setImage] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const [editing, setEditing] = useState(false);
     const navigate = useNavigate();
 
-    // --- Authentication Guard and Initial Profile Image Load ---
-    useEffect(() => {
-        // If authentication state is still loading, do nothing
-        if (authLoading) {
-            return;
-        }
-
-        // If there's an authentication error, log it and alert the user
-        if (authError) {
-            console.error("Authentication error:", authError);
-            alert("Error checking your login status. Please try again.");
-            return;
-        }
-
-        // If no user is logged in, redirect to the login page
-        if (!user) {
-            console.log("No user logged in. Redirecting to /login.");
-            navigate("/login");
-            return;
-        }
-
-        // When user data is available, set the initial profile picture preview
-        // This ensures the image persists across sessions and loads correctly
-        if (user && user.photoURL && !preview) {
-            setPreview(user.photoURL);
-        }
-
-    }, [user, authLoading, authError, navigate, preview]); // Dependencies for useEffect
-
-    // --- Inline Styles for Reusability ---
     const sectionStyle = {
         display: "flex",
         alignItems: "center",
@@ -62,161 +26,74 @@ const Overview = () => {
     };
 
     const cardStyle = {
-        backgroundColor: "#111", // Darker background for cards
+        backgroundColor: "#111",
         padding: "20px",
         borderRadius: "15px",
-        boxShadow: "0 0 15px #0ff3", // Subtle cyan glow
+        boxShadow: "0 0 15px #0ff3",
         maxWidth: "400px",
         marginBottom: "40px",
     };
 
-    // --- Event Handlers ---
-
-    // Handles file selection for image input
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setImage(file); // Store the actual file object
-            setPreview(URL.createObjectURL(file)); // Create a local URL for instant visual preview
-        } else {
-            // If the user clears the selection, revert to the existing profile photo or default
-            setImage(null);
-            setPreview(user?.photoURL || "https://i.imgur.com/6VBx3io.png"); // Fallback to default if no user photo
+            setImage(file);
+            setPreview(URL.createObjectURL(file));
         }
     };
 
-    // Handles the actual image upload to Firebase Storage and updating user profile
-    const handleUploadImage = async () => {
-        if (!image) {
-            alert("Please select an image first!");
-            return;
-        }
-        if (!user) {
-            alert("You must be logged in to upload an image.");
-            return;
-        }
-
-        setUploading(true); // Set uploading state to true to disable button and show feedback
-        try {
-            // 1. Create a reference to the storage location
-            // Using `user.uid` ensures each user has their own unique folder for profile images
-            // Using a generic name like 'profile.jpg' means it will overwrite the previous one in that user's folder
-            const imageRef = ref(storage, `profile_images/${user.uid}/profile.jpg`);
-
-            // 2. Upload the image file to Firebase Storage
-            const snapshot = await uploadBytes(imageRef, image);
-            console.log('Uploaded image!', snapshot);
-
-            // 3. Get the public download URL of the uploaded image
-            const downloadURL = await getDownloadURL(snapshot.ref);
-            console.log('File available at', downloadURL);
-
-            // 4. Update the user's Firebase Authentication profile with the new photoURL
-            await updateProfile(user, { photoURL: downloadURL });
-
-            // Update local state to reflect the new profile picture permanently
-            setPreview(downloadURL); // Update preview to the permanent URL
-            setImage(null); // Clear the selected file from state
-            setEditing(false); // Exit editing mode
-            alert("Profile image updated successfully!");
-
-        } catch (error) {
-            console.error("Error uploading image or updating profile:", error);
-            alert("Failed to upload image: " + error.message);
-        } finally {
-            setUploading(false); // Reset uploading state
-        }
-    };
-
-    // Handles user logout using Firebase Authentication
-    const handleLogout = async () => {
-        try {
-            await auth.signOut(); // Sign out from Firebase
-            navigate("/login"); // Redirect to login page after successful logout
-        } catch (error) {
-            console.error("Error signing out:", error);
-            alert("Failed to log out. Please try again.");
-        }
-    };
-
-    // --- Reusable MenuItem Component ---
-    // Props: icon (React element), label (string), description (string, optional), onClick (function)
     const MenuItem = ({ icon, label, description, onClick }) => (
         <div
             style={sectionStyle}
             onClick={onClick}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#0ff1")} // Subtle hover background
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#0ff1")}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
         >
-            <div style={{ color: "#0ff" }}>{icon}</div> {/* Cyan icon */}
+            <div style={{ color: "#0ff" }}>{icon}</div>
             <div>
                 <div style={{ fontWeight: "600" }}>{label}</div>
                 {description && (
-                    <div style={{ fontSize: "13px", color: "#aaa" }}>{description}</div> // Lighter grey for description
+                    <div style={{ fontSize: "13px", color: "#aaa" }}>{description}</div>
                 )}
             </div>
         </div>
     );
 
-    // --- Conditional Rendering for Loading/Authentication ---
-    // Show a loading message while auth state is being determined
-    if (authLoading) {
-        return <div style={{ backgroundColor: "#000", color: "#fff", minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "20px" }}>
-            <span style={{ marginRight: "10px" }}>⏳</span> Loading user data...
-        </div>;
-    }
-
-    // If no user is logged in (after authLoading is false), this check triggers redirection
-    if (!user) {
-        // Redirection is handled by useEffect, but this can be a temporary display
-        return <div style={{ backgroundColor: "#000", color: "#fff", minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", fontSize: "20px" }}>
-            Redirecting to login...
-        </div>;
-    }
-
-    // --- Main Component Render ---
     return (
         <div style={{ backgroundColor: "#000", color: "#fff", padding: "40px", fontFamily: "Poppins" }}>
-            <h2 style={{ fontSize: "26px", marginBottom: "20px", color: "#0ff", textShadow: "0 0 8px #0ff" }}>Account Overview</h2>
+            <h2 style={{ fontSize: "26px", marginBottom: "20px", color: "#0ff" }}>Account Overview</h2>
 
-            {/* User Profile Section with Current Image/Default */}
             <div style={{ display: "flex", alignItems: "center", marginBottom: "30px" }}>
-                <img
-                    // The 'preview' state holds the local URL (if selected) or the permanent user.photoURL
-                    // If neither, it falls back to the default placeholder image.
-                    src={preview || user.photoURL || "https://i.imgur.com/6VBx3io.png"}
-                    alt="Profile"
-                    style={{
-                        width: 60,
-                        height: 60,
-                        borderRadius: "50%",
-                        marginRight: 15,
-                        objectFit: "cover",
-                        border: "2px solid #0ff", // Cyan border for profile pic
-                        boxShadow: "0 0 10px #0ff4", // Subtle glow
-                    }}
-                />
+                {preview ? (
+                    <img
+                        src={preview}
+                        alt="Profile Preview"
+                        style={{
+                            width: 60,
+                            height: 60,
+                            borderRadius: "50%",
+                            marginRight: 15,
+                            objectFit: "cover",
+                            border: "2px solid #0ff",
+                        }}
+                    />
+                ) : (
+                    <FaUser size={60} color="#0ff" style={{ marginRight: "15px" }} />
+                )}
                 <div>
                     <h3>{user?.displayName || "Customer"}</h3>
                     <p style={{ color: "#aaa" }}>{user?.email}</p>
                 </div>
             </div>
 
-            {/* Edit Profile Image Section (Toggleable) */}
-            <div style={{ ...sectionStyle, justifyContent: "space-between", marginBottom: "30px", backgroundColor: "#111", borderRadius: "15px", boxShadow: "0 0 10px #0ff3" }}>
+            {/* Edit Profile Section */}
+            <div style={{ ...sectionStyle, justifyContent: "space-between", marginBottom: "30px" }}>
                 <div style={{ display: "flex", alignItems: "center" }}>
                     <FaEdit style={{ marginRight: 10, color: "#0ff" }} />
-                    <span>Edit Profile Image</span>
+                    <span>Edit Profile</span>
                 </div>
                 <button
-                    onClick={() => {
-                        setEditing(!editing); // Toggle editing mode
-                        // If cancelling edit, clear the selected image and revert preview
-                        if (editing) {
-                            setImage(null);
-                            setPreview(user?.photoURL || "https://i.imgur.com/6VBx3io.png");
-                        }
-                    }}
+                    onClick={() => setEditing(!editing)}
                     style={{
                         backgroundColor: "#0ff",
                         border: "none",
@@ -225,141 +102,102 @@ const Overview = () => {
                         cursor: "pointer",
                         color: "#000",
                         fontWeight: "bold",
-                        transition: "background-color 0.2s, box-shadow 0.2s",
-                        boxShadow: "0 0 8px rgba(0, 255, 255, 0.4)",
                     }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#00e6e6'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#0ff'}
                 >
-                    {editing ? "Cancel" : "Change Image"}
+                    {editing ? "Cancel" : "Upload Image"}
                 </button>
             </div>
 
-            {/* Image Upload Input and Upload Button (Visible when editing) */}
             {editing && (
-                <div style={{ marginBottom: 40, display: "flex", gap: "10px", alignItems: "center", maxWidth: "400px" }}>
+                <div style={{ marginBottom: 40 }}>
                     <input
                         type="file"
                         accept="image/*"
                         onChange={handleImageChange}
                         style={{
-                            flexGrow: 1,
-                            padding: "10px",
+                            padding: "8px",
                             borderRadius: "8px",
                             border: "1px solid #0ff",
                             backgroundColor: "#111",
                             color: "#fff",
-                            cursor: "pointer",
                         }}
                     />
-                    <button
-                        onClick={handleUploadImage}
-                        disabled={uploading || !image} // Disable if uploading or no image selected
-                        style={{
-                            backgroundColor: uploading || !image ? "#555" : "#00ccff", // Grey out when uploading or no image
-                            border: "none",
-                            borderRadius: "5px",
-                            padding: "10px 15px",
-                            cursor: uploading || !image ? "not-allowed" : "pointer",
-                            color: "#fff",
-                            fontWeight: "bold",
-                            transition: "background-color 0.2s, box-shadow 0.2s",
-                            boxShadow: uploading || !image ? "none" : "0 0 8px rgba(0, 204, 255, 0.4)",
-                        }}
-                        onMouseEnter={e => !uploading && !image && (e.currentTarget.style.backgroundColor = '#00ace6')}
-                        onMouseLeave={e => !uploading && !image && (e.currentTarget.style.backgroundColor = '#00ccff')}
-                    >
-                        {uploading ? "Uploading..." : "Upload"}
-                    </button>
                 </div>
             )}
 
-            {/* Card with Main Account Menu Items */}
+            {/* Card with Menu */}
             <div style={cardStyle}>
                 <MenuItem
-                    icon={<FaBoxOpen size={20} />}
+                    icon={<FaBoxOpen />}
                     label="Orders"
-                    description="Check your order status and history"
-                    onClick={() => navigate("/orders")}
+                    description="Check your order status"
+                    onClick={() => navigate("/customerorderview")}
                 />
                 <MenuItem
-                    icon={<FaHeart size={20} />}
+                    icon={<FaHeart />}
                     label="Collections & Wishlist"
-                    description="Your saved favorites and curated lists"
+                    description="Your saved favorites"
                     onClick={() => navigate("/collections")}
                 />
                 <MenuItem
-                    icon={<FaCreditCard size={20} />}
-                    label="Vashudhra Credit"
-                    description="View refunds & gift cards"
+                    icon={<FaCreditCard />}
+                    label="Myntra Credit"
+                    description="Refunds & gift cards"
                     onClick={() => navigate("/vashudhra-credit")}
                 />
                 <MenuItem
-                    icon={<FaMoneyBill size={20} />}
+                    icon={<FaMoneyBill />}
                     label="MynCash"
                     description="Earn & use while shopping"
-                    onClick={() => navigate("/cash")}
-                />
-                <MenuItem
-                    icon={<FaTag size={20} />}
-                    label="My Coupons"
-                    description="Your available discounts and offers"
-                    onClick={() => navigate("/coupons")}
-                />
-            </div>
-
-            {/* Card with Payment & Address Details */}
-            <div style={cardStyle}>
-                <MenuItem
-                    icon={<FaCreditCard size={20} />}
-                    label="Saved Cards"
-                    description="Manage your credit and debit cards"
-                    onClick={() => navigate("/saved-cards")}
-                />
-                <MenuItem
-                    icon={<FaQrcode size={20} />}
-                    label="Saved UPI"
-                    description="Manage your UPI IDs"
-                    onClick={() => navigate("/saved-upi")}
-                />
-                <MenuItem
-                    icon={<FaMoneyBill size={20} />}
-                    label="Wallets / BNPL"
-                    description="Connect your digital wallets or Buy Now Pay Later options"
                     onClick={() => navigate("/wallets")}
                 />
                 <MenuItem
-                    icon={<FaMapMarkerAlt size={20} />}
-                    label="My Addresses"
-                    description="Add or edit your delivery addresses"
+                    icon={<FaCreditCard />}
+                    label="Saved Cards"
+                    onClick={() => navigate("/saved-cards")}
+                />
+                <MenuItem
+                    icon={<FaQrcode />}
+                    label="Saved UPI"
+                    onClick={() => navigate("/saved-upi")}
+                />
+                <MenuItem
+                    icon={<FaMoneyBill />}
+                    label="Wallets / BNPL"
+                    onClick={() => navigate("/wallets")}
+                />
+                <MenuItem
+                    icon={<FaMapMarkerAlt />}
+                    label="Addresses"
                     onClick={() => navigate("/addresses")}
                 />
                 <MenuItem
-                    icon={<FaUser size={20} />}
+                    icon={<FaTag />}
+                    label="Coupons"
+                    onClick={() => navigate("/coupons")}
+                />
+                <MenuItem
+                    icon={<FaUser />}
                     label="Profile Details"
-                    description="Manage your personal information"
                     onClick={() => navigate("/profile-details")}
                 />
             </div>
 
-            {/* Logout Section */}
+            {/* Logout */}
             <div
-                onClick={handleLogout} // Attached the actual logout handler
                 style={{
                     ...sectionStyle,
                     maxWidth: "400px",
                     backgroundColor: "#111",
                     borderRadius: "15px",
-                    boxShadow: "0 0 15px #f003",
+                    boxShadow: "0 0 15px #f00",
                     marginTop: "20px",
-                    color: "#f55", // Softer red for text
+                    color: "#f00",
                     fontWeight: "bold",
                     justifyContent: "center",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#220000")} // Darker red on hover
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#111")}
             >
-                <FaSignOutAlt style={{ marginRight: 10, color: '#f55' }} size={20} /> Logout
+                <FaSignOutAlt style={{ marginRight: 10 }} /> Logout
             </div>
         </div>
     );
