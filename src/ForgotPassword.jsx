@@ -53,9 +53,18 @@ const ForgotPassword = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-orange-400 to-red-500 px-4">
-            <div className="max-w-md w-full bg-white rounded-2xl p-8 shadow-xl">
-                <h2 className="text-3xl font-extrabold text-center mb-6 text-gray-800">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 sm:p-6 lg:p-8"> {/* Updated background */}
+            <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-8 sm:p-10 transform transition-all duration-300 ease-in-out hover:scale-[1.01] border border-gray-100"> {/* Updated card styling */}
+                {/* Image Container */}
+                <div className="flex justify-center mb-8 h-32"> {/* Added height for the image */}
+                    <img
+                        className="w-auto h-full object-contain" // Ensures full image visibility
+                        src="/Forget password image.png" // **IMPORTANT: Replace with your actual image URL!**
+                        alt="Forgot Password Icon"
+                    />
+                </div>
+
+                <h2 className="text-3xl font-extrabold text-center mb-6 text-gray-900"> {/* Updated text color */}
                     Forgot Password
                 </h2>
 

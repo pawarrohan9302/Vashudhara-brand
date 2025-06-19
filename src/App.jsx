@@ -19,7 +19,6 @@ import Register from "./Register.jsx";
 import ForgotPassword from "./ForgotPassword.jsx";
 import Wishlist from "./Wishlist.jsx";
 import GiftCard from "./GiftCard.jsx";
-// import VashudhraCredit from "./VashudhraCredit.jsx"; // REMOVED: VashudhraCredit component
 
 // NEW: Product Detail Component
 import ProductDetail from "./ProductDetail.jsx"; // Import the new ProductDetail component
@@ -70,7 +69,7 @@ const App = () => (
         <Route element={<PrivateRoute />}>
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/gift-cards" element={<GiftCard />} />
-          {/* REMOVED: <Route path="/vashudhra-credit" element={<VashudhraCredit />} /> */}
+          {/* VashudhraCredit route was intentionally removed based on your comment */}
 
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/profile" element={<ProfileForm />} />
@@ -79,7 +78,7 @@ const App = () => (
           <Route path="/profile-details" element={<Profile />} />
           <Route path="/coupons" element={<Coupons />} />
           <Route path="/saved-cards" element={<SavedCards />} />
-          <Route path="/saved-upi" element={<SavedUPI />} /> {/* Keeping this route for now, assuming you just want to remove the button */}
+          <Route path="/saved-upi" element={<SavedUPI />} />
           <Route path="/wallets" element={<Wallets />} />
           <Route path="/addresses" element={<Addresses />} />
           <Route path="/overview" element={<Overview />} />
