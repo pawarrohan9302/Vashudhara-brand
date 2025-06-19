@@ -6,8 +6,8 @@ import { useAuthState } from "react-firebase-hooks/auth"; // Import useAuthState
 
 // --- Navigation Links Data for Customer Dashboard (with conceptual icons) ---
 const navLinks = [
-    { label: "Overview", path: "/overview", icon: "📊" },
-    { label: "My Orders", path: "/orders", icon: "📦" }, // Confirmed: This is for customers
+    { label: "Overview", path: "/Overview", icon: "📊" },
+    { label: "My Orders", path: "/orders", icon: "📦" }, // Re-added the navlink for Orders
     { label: "Collections & Wishlist", path: "/collections", icon: "❤️" },
     { label: "My Coupons", path: "/coupons", icon: "💸" },
     { label: "Vashudhra Credit", path: "/vashudhra-credit", icon: "💳" },
@@ -24,76 +24,93 @@ const Orders = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true); // Manages loading state for orders data
     const [authChecking, setAuthChecking] = useState(true); // New state to indicate initial auth check
-    const [user, authLoading, authError] = useAuthState(auth); // Firebase auth state management
+
+    // Firebase auth state management
+    // user: the authenticated user object, null if not logged in
+    // authLoading: true while fetching initial auth state, false when done
+    // authError: error object if authentication fails
+    const [user, authLoading, authError] = useAuthState(auth);
 
     // --- Hooks for Navigation and Location ---
     const navigate = useNavigate();
     const location = useLocation();
 
-    // --- useEffect for Authentication and Data Fetching ---
+    // --- Effect for Authentication Check ---
+    // This effect runs on component mount and whenever authLoading or user state changes.
+    // It's responsible for managing redirection based on authentication status.
     useEffect(() => {
-        // This effect runs only once on component mount to check auth status
-        if (!authLoading) {
+        if (!authLoading) { // Once Firebase has finished checking auth status
             setAuthChecking(false); // Auth check is complete
-            if (!user) {
+            if (!user) { // If no user is logged in
                 console.log("No user logged in. Redirecting to /login.");
-                navigate("/login");
+                navigate("/login"); // Redirect them to the login page
             }
         }
-    }, [user, authLoading, navigate]);
+    }, [user, authLoading, navigate]); // Dependencies: user object, authLoading boolean, navigate function
 
+    // --- Effect for Fetching Orders Data ---
+    // This effect runs only when the user object is available and authentication check is complete.
+    // It subscribes to real-time updates of user-specific orders from Firebase Realtime Database.
     useEffect(() => {
+        // Prevent fetching if auth is still being checked, loading, or no user is logged in
         if (authChecking || authLoading || !user) {
-            // Don't try to fetch data if auth is still being checked, loading, or no user
             return;
         }
 
-        setLoading(true); // Start loading orders
+        setLoading(true); // Indicate that orders data is being loaded
+
+        // Reference to the user's specific orders path in Realtime Database
+        // Structure: /orders/{user.uid}/{order_id}
         const userOrdersRef = ref(database, `orders/${user.uid}`);
 
+        // Set up a real-time listener using onValue
         const unsubscribe = onValue(
             userOrdersRef,
             (snapshot) => {
-                const data = snapshot.val();
+                const data = snapshot.val(); // Get the data from the snapshot
                 const loadedOrders = [];
 
                 if (data) {
+                    // Iterate over each order (key is order ID)
                     Object.keys(data).forEach((key) => {
                         loadedOrders.push({
-                            id: key,
-                            ...data[key],
+                            id: key, // Use the Firebase key as the order ID
+                            ...data[key], // Spread the rest of the order data
                         });
                     });
                 }
 
                 // Sort orders by date in descending order (newest first)
+                // Assumes 'date' field exists in your order objects and is parseable by new Date()
                 loadedOrders.sort((a, b) => {
-                    const dateA = a.date ? new Date(a.date) : new Date(0);
+                    const dateA = a.date ? new Date(a.date) : new Date(0); // Handle missing date gracefully
                     const dateB = b.date ? new Date(b.date) : new Date(0);
-                    return dateB.getTime() - dateA.getTime();
+                    return dateB.getTime() - dateA.getTime(); // Sort by timestamp
                 });
 
-                setOrders(loadedOrders);
-                setLoading(false);
+                setOrders(loadedOrders); // Update state with fetched and sorted orders
+                setLoading(false); // End loading state
             },
             (error) => {
+                // Error callback for onValue listener
                 console.error("Error fetching user orders from Firebase:", error);
-                setLoading(false);
+                setLoading(false); // End loading state even on error
                 alert(
                     "Failed to load your orders. Please check your internet connection or try again."
                 );
             }
         );
 
-        // Cleanup subscription on component unmount
+        // Cleanup function: Unsubscribe from the listener when the component unmounts
+        // or when dependencies change, to prevent memory leaks.
         return () => unsubscribe();
-    }, [user, authChecking, authLoading]); // Depend on user and auth check status
+    }, [user, authChecking, authLoading]); // Dependencies for this effect
 
     // --- Event Handler for Logout ---
     const handleLogout = async () => {
         try {
-            await auth.signOut();
-            navigate("/login");
+            await auth.signOut(); // Sign out the user from Firebase
+            navigate("/login"); // Redirect to login page after logout
         } catch (error) {
             console.error("Error signing out:", error);
             alert("Failed to log out. Please try again.");
@@ -105,23 +122,23 @@ const Orders = () => {
 
     // --- Helper to get status badge styling & icon ---
     const getStatusInfo = (status) => {
-        const lowerStatus = status ? status.toLowerCase() : "";
+        const lowerStatus = status ? String(status).toLowerCase() : "";
         if (lowerStatus.includes("canceled") || lowerStatus.includes("failed")) {
-            return { color: "#E53E3E", icon: "❌" }; // Red, Cross icon
+            return { color: "#EF4444", icon: "❌" }; // Red, Cross icon (Tailwind red-500)
         }
         if (lowerStatus.includes("delivered")) {
-            return { color: "#38A169", icon: "✅" }; // Green, Checkmark icon
+            return { color: "#22C55E", icon: "✅" }; // Green, Checkmark icon (Tailwind green-500)
         }
         if (lowerStatus.includes("shipped") || lowerStatus.includes("dispatch")) {
-            return { color: "#D69E2E", icon: "🚚" }; // Yellow/Orange, Truck icon
+            return { color: "#F59E0B", icon: "🚚" }; // Amber/Orange, Truck icon (Tailwind amber-500)
         }
         if (lowerStatus.includes("processing") || lowerStatus.includes("pending")) {
-            return { color: "#3182CE", icon: "⏳" }; // Blue, Hourglass icon
+            return { color: "#3B82F6", icon: "⏳" }; // Blue, Hourglass icon (Tailwind blue-500)
         }
-        return { color: "#A0AEC0", icon: "ℹ️" }; // Default (Grey), Info icon
+        return { color: "#6B7280", icon: "ℹ️" }; // Default (Grey), Info icon (Tailwind gray-500)
     };
 
-    // --- Conditional Render for Authentication State ---
+    // --- Conditional Render for Authentication and Initial Loading States ---
     if (authChecking || authLoading) {
         return (
             <div style={styles.authStatusContainer}>
@@ -143,6 +160,7 @@ const Orders = () => {
         );
     }
 
+    // Main component rendering starts here, after authentication is confirmed
     return (
         <div style={styles.dashboardContainer}>
             {/* --- Sidebar Navigation --- */}
@@ -151,7 +169,7 @@ const Orders = () => {
                 {user && (
                     <div style={styles.userInfo}>
                         <img
-                            src={user.photoURL || "https://i.imgur.com/6VBx3io.png"}
+                            src={user.photoURL || "https://i.imgur.com/6VBx3io.png"} // Default profile image
                             alt="Profile"
                             style={styles.profileImage}
                         />
@@ -196,7 +214,7 @@ const Orders = () => {
                             const statusInfo = getStatusInfo(order.status);
                             return (
                                 <div
-                                    key={order.id || order.orderId || Math.random()} // Fallback key
+                                    key={order.id || order.orderId || Math.random()} // Fallback key for React list rendering
                                     style={styles.orderCard}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.transform = "translateY(-5px)";
@@ -208,7 +226,8 @@ const Orders = () => {
                                         e.currentTarget.style.boxShadow =
                                             "0 2px 10px rgba(0, 0, 0, 0.1)"; // Default shadow
                                     }}
-                                    onClick={() => navigate(`/order-details/${order.id}`)} // Navigate to a detailed order page
+                                    // Navigate to a detailed order page when card is clicked
+                                    onClick={() => navigate(`/order-details/${order.id}`)}
                                 >
                                     <div style={styles.orderHeader}>
                                         <h3 style={styles.orderId}>
