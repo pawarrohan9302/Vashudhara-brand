@@ -8,7 +8,7 @@ const colors = {
     textMedium: "#555555",      // Slightly lighter text
     textSubtle: "#777777",      // Subtle text for roles/descriptions
     vibrantGreen: "#10B981",    // A strong green for titles and accents
-    deepGreen: "#059669",       // Deeper green for underlines/highlights
+    deepGreen: "#059669",      // Deeper green for underlines/highlights
     brightGreen: "#34D399",     // Brighter green for key highlights
     cardLight: "#f9f9f9",       // Light grey for card backgrounds
     cardBorder: "#e0e0e0",      // Light grey border for cards

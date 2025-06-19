@@ -21,6 +21,9 @@ import Wishlist from "./Wishlist.jsx";
 import GiftCard from "./GiftCard.jsx";
 // import VashudhraCredit from "./VashudhraCredit.jsx"; // REMOVED: VashudhraCredit component
 
+// NEW: Product Detail Component
+import ProductDetail from "./ProductDetail.jsx"; // Import the new ProductDetail component
+
 // Protected Components
 import Dashboard from "./Dashboard.jsx";
 import ProfileForm from "./ProfileForm.jsx";
@@ -49,6 +52,9 @@ const App = () => (
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/collections" element={<Collections />} />
+
+        {/* Product Detail Route: This is where individual product details will be displayed */}
+        <Route path="/product/:id" element={<ProductDetail />} />
 
         <Route path="/mens-wear" element={<CategoryPage category="mens-wear" />} />
         <Route path="/womens-wear" element={<CategoryPage category="womens-wear" />} />

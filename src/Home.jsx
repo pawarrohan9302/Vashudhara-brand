@@ -1,6 +1,8 @@
+// src/HomePage.jsx
 import React, { useCallback } from "react";
+import FeaturedProducts from './FeaturedProducts.jsx'; // Make sure this path is correct and extension is .jsx
 import {
-    FaLeaf, // Not used in the provided code, but kept for completeness
+    FaLeaf,
     FaShippingFast,
     FaStar,
     FaShieldAlt,
@@ -9,8 +11,7 @@ import {
     FaTwitter,
 } from "react-icons/fa";
 
-// CSS keyframes inside a <style> tag or external CSS is recommended,
-// but here we inject via React for convenience
+// CSS keyframes (consider moving to a separate CSS file for larger projects)
 const styles = `
 @keyframes fadeInDown {
     0% {opacity: 0; transform: translateY(-20px);}
@@ -26,6 +27,7 @@ const styles = `
 }
 `;
 
+// Custom hook for consistent hover effects
 const useHoverEffect = () => {
     const onMouseEnter = useCallback((e) => {
         e.currentTarget.style.transform = "scale(1.07)";
@@ -40,25 +42,25 @@ const useHoverEffect = () => {
     return { onMouseEnter, onMouseLeave };
 };
 
+// Hero Section Component
 const Hero = () => {
     const buttonHover = useHoverEffect();
 
     const handleShopNow = () => {
-        window.location.href = "/collections";
+        window.location.href = "/collections"; // Navigate to collections page
     };
 
     return (
         <section
             style={{
-                // Removed the linear-gradient overlay here
-                backgroundImage: "url('/HD.jpg')",
+                backgroundImage: "url('/HD.jpg')", // Your background image
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",
-                color: "#fff", // Changed text color to white for better contrast with potentially dark image
+                color: "#fff",
                 padding: "160px 20px",
                 textAlign: "center",
-                borderBottom: "5px solid #34d399",
+                borderBottom: "5px solid #34d399", // Green border for separation
                 fontFamily: "'Poppins', sans-serif",
                 animation: "fadeInDown 1.2s ease forwards",
                 userSelect: "none",
@@ -71,7 +73,7 @@ const Hero = () => {
                     fontSize: "clamp(2.5rem, 5vw, 3.5rem)",
                     fontWeight: "900",
                     marginBottom: "20px",
-                    textShadow: "3px 3px 15px rgba(0,0,0,0.8)", // Adjusted text shadow for dark text
+                    textShadow: "3px 3px 15px rgba(0,0,0,0.8)",
                     lineHeight: "1.1",
                     animation: "fadeInUp 1.5s ease forwards",
                 }}
@@ -84,7 +86,7 @@ const Hero = () => {
                     maxWidth: "620px",
                     margin: "0 auto",
                     lineHeight: "1.7",
-                    color: "#d1d5db", // Light text color for better readability on original image
+                    color: "#d1d5db",
                     fontFamily: "'Open Sans', sans-serif",
                     animation: "fadeInUp 1.7s ease forwards",
                 }}
@@ -119,12 +121,12 @@ const Hero = () => {
     );
 };
 
+// Categories Section Component
 const Categories = () => {
-    // Updated order of categories as requested
     const categories = [
         "Women's Earrings",
         "Rings",
-        "Festive Mauve Lehenga Set ✨",
+        "Bracelets",
         "Accessories"
     ];
     const hoverEffect = useHoverEffect();
@@ -132,7 +134,7 @@ const Categories = () => {
     return (
         <section
             style={{
-                backgroundColor: "#ffffff", // Changed to white
+                backgroundColor: "#ffffff",
                 padding: "60px 20px",
                 textAlign: "center",
                 fontFamily: "'Poppins', sans-serif",
@@ -144,7 +146,7 @@ const Categories = () => {
                 style={{
                     fontSize: "clamp(2rem, 4vw, 2.5rem)",
                     fontWeight: "700",
-                    color: "#1a202c", // Changed to dark for contrast
+                    color: "#1a202c",
                     marginBottom: "50px",
                     animation: "fadeIn 1.5s ease forwards",
                     userSelect: "none",
@@ -175,9 +177,9 @@ const Categories = () => {
                             imagePath = "/Untitled design (2).png";
                             targetUrl = "/accessories"; // Changed target URL to /accessories
                             break;
-                        case "Festive Mauve Lehenga Set ✨":
-                            imagePath = "/Untitled design (1).png";
-                            targetUrl = "/collections"; // Specific target for this item
+                        case "Bracelets":
+                            imagePath = "/Bracelet.jpg";
+                            targetUrl = "/accessories"; // Specific target for this item
                             break;
                         case "Women's Earrings":
                             imagePath = "/womens%20earrings.jpg";
@@ -193,16 +195,16 @@ const Categories = () => {
                             key={index}
                             role="button"
                             tabIndex={0}
-                            onClick={() => window.location.href = targetUrl} // Use dynamic targetUrl
+                            onClick={() => window.location.href = targetUrl}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" || e.key === " ") {
                                     e.preventDefault();
-                                    window.location.href = targetUrl; // Use dynamic targetUrl
+                                    window.location.href = targetUrl;
                                 }
                             }}
                             {...hoverEffect}
                             style={{
-                                backgroundColor: "#edf2f7", // Light background for cards
+                                backgroundColor: "#edf2f7",
                                 borderRadius: "16px",
                                 boxShadow: "0 6px 25px rgba(52, 211, 153, 0.3)",
                                 overflow: "hidden",
@@ -223,7 +225,7 @@ const Categories = () => {
                                     width: "100%",
                                     height: "100%",
                                     objectFit: "cover",
-                                    filter: "brightness(0.95)", // Slightly adjusted brightness
+                                    filter: "brightness(0.95)",
                                     transition: "transform 0.3s ease",
                                 }}
                             />
@@ -234,7 +236,7 @@ const Categories = () => {
                                     left: "50%",
                                     transform: "translateX(-50%)",
                                     padding: "12px 28px",
-                                    backgroundColor: "rgba(255, 255, 255, 0.8)", // Adjusted for white background
+                                    backgroundColor: "rgba(255, 255, 255, 0.8)",
                                     color: "#34d399",
                                     fontWeight: "700",
                                     fontSize: "1.3rem",
@@ -242,7 +244,7 @@ const Categories = () => {
                                     letterSpacing: "1.2px",
                                     pointerEvents: "none",
                                     userSelect: "none",
-                                    boxShadow: "0 4px 10px rgba(0,0,0,0.1)", // Added shadow for text clarity
+                                    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
                                 }}
                             >
                                 {category}
@@ -255,6 +257,7 @@ const Categories = () => {
     );
 };
 
+// Why Us Section Component
 const WhyUs = () => {
     const reasons = [
         {
@@ -283,7 +286,7 @@ const WhyUs = () => {
         <section
             style={{
                 padding: "80px 20px",
-                backgroundColor: "#ffffff", // Changed to white
+                backgroundColor: "#ffffff",
                 textAlign: "center",
                 fontFamily: "'Poppins', sans-serif",
                 userSelect: "none",
@@ -293,7 +296,7 @@ const WhyUs = () => {
             <h2
                 style={{
                     fontSize: "clamp(2.25rem, 4vw, 2.5rem)",
-                    color: "#1a202c", // Changed to dark for contrast
+                    color: "#1a202c",
                     fontWeight: "700",
                     marginBottom: "50px",
                     animation: "fadeIn 1.5s ease forwards",
@@ -318,7 +321,7 @@ const WhyUs = () => {
                         tabIndex={0}
                         aria-label={`${item.title} feature`}
                         style={{
-                            backgroundColor: "#edf2f7", // Light background for cards
+                            backgroundColor: "#edf2f7",
                             padding: "36px 24px",
                             borderRadius: "22px",
                             width: "300px",
@@ -326,7 +329,7 @@ const WhyUs = () => {
                             transition: "transform 0.3s ease, boxShadow 0.3s ease",
                             cursor: "pointer",
                             textAlign: "center",
-                            color: "#4a5568", // Changed to dark for contrast
+                            color: "#4a5568",
                             outline: "none",
                             userSelect: "none",
                         }}
@@ -344,7 +347,7 @@ const WhyUs = () => {
                             style={{
                                 fontSize: "1.5rem",
                                 fontWeight: "700",
-                                color: "#1a202c", // Changed to dark for contrast
+                                color: "#1a202c",
                                 marginBottom: "15px",
                             }}
                         >
@@ -353,7 +356,7 @@ const WhyUs = () => {
                         <p
                             style={{
                                 fontSize: "1rem",
-                                color: "#4a5568", // Changed to dark for contrast
+                                color: "#4a5568",
                                 lineHeight: "1.7",
                                 fontFamily: "'Open Sans', sans-serif",
                             }}
@@ -367,11 +370,12 @@ const WhyUs = () => {
     );
 };
 
+// Delivery Guarantee Section Component
 const DeliveryGuarantee = () => {
     return (
         <section
             style={{
-                backgroundColor: "#ffffff", // Changed to white
+                backgroundColor: "#ffffff",
                 padding: "60px 20px",
                 display: "flex",
                 justifyContent: "center",
@@ -382,12 +386,12 @@ const DeliveryGuarantee = () => {
             <div
                 style={{
                     maxWidth: "700px",
-                    backgroundColor: "#edf2f7", // Light background for the content box
+                    backgroundColor: "#edf2f7",
                     borderRadius: "20px",
                     padding: "44px 36px",
                     boxShadow: "0 12px 38px rgba(52, 211, 153, 0.45)",
                     textAlign: "center",
-                    color: "#1a202c", // Changed to dark for contrast
+                    color: "#1a202c",
                     fontFamily: "'Poppins', sans-serif",
                     lineHeight: "1.75",
                     fontSize: "1.125rem",
@@ -407,7 +411,7 @@ const DeliveryGuarantee = () => {
                     our commitment to quality service means you can trust us to deliver
                     your products right to your doorstep, no matter where you are
                 </p>
-                <p style={{ marginTop: "24px", fontStyle: "italic", color: "#4a5568" }}> {/* Darker italic text */}
+                <p style={{ marginTop: "24px", fontStyle: "italic", color: "#4a5568" }}>
                     Wherever you are, enjoy seamless doorstep delivery tailored for your
                     convenience.
                 </p>
@@ -416,13 +420,14 @@ const DeliveryGuarantee = () => {
     );
 };
 
+// About Us Section Component
 const AboutUs = () => {
     return (
         <section
             style={{
                 padding: "80px 20px",
-                backgroundColor: "#ffffff", // Changed to white
-                color: "#1a202c", // Changed to dark for contrast
+                backgroundColor: "#ffffff",
+                color: "#1a202c",
                 textAlign: "center",
                 fontFamily: "'Poppins', sans-serif",
                 animation: "fadeIn 2s ease forwards",
@@ -447,7 +452,7 @@ const AboutUs = () => {
                     fontSize: "1.125rem",
                     lineHeight: "1.75",
                     fontFamily: "'Open Sans', sans-serif",
-                    color: "#4a5568", // Darker text color
+                    color: "#4a5568",
                 }}
             >
                 Vashudhara is dedicated to bringing you the finest quality products with
@@ -458,14 +463,15 @@ const AboutUs = () => {
     );
 };
 
+// Footer Section Component
 const Footer = () => {
     const hoverEffect = useHoverEffect();
 
     return (
         <footer
             style={{
-                backgroundColor: "#f7fafc", // Light background for the footer
-                color: "#4a5568", // Darker text color
+                backgroundColor: "#f7fafc",
+                color: "#4a5568",
                 padding: "40px 20px",
                 textAlign: "center",
                 fontFamily: "'Poppins', sans-serif",
@@ -495,7 +501,7 @@ const Footer = () => {
                         {...hoverEffect}
                         style={{
                             margin: "0 14px",
-                            color: "#4a5568", // Darker icon color
+                            color: "#4a5568",
                             fontSize: "24px",
                             transition: "color 0.3s ease",
                             outline: "none",
@@ -515,12 +521,15 @@ const Footer = () => {
     );
 };
 
+// Main HomePage Component
 const HomePage = () => {
     return (
         <>
-            {/* Inject styles for animations */}
+            {/* Inject global styles for animations */}
             <style>{styles}</style>
             <Hero />
+            {/* The FeaturedProducts component is placed right after the Hero section */}
+            <FeaturedProducts />
             <Categories />
             <WhyUs />
             <DeliveryGuarantee />

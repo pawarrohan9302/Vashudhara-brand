@@ -3,16 +3,9 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { auth } from "./firebase";
 
 import {
-    FaGem,
-    FaRing,
-    FaGift,
-    FaStore,
-    FaInfoCircle,
-    FaShoppingCart,
-    FaInstagram,
-    FaHome,
     FaUserCircle,
     FaAngleDown,
+    FaInstagram,
 } from "react-icons/fa";
 
 const Header = () => {
@@ -61,13 +54,13 @@ const Header = () => {
     const currentPath = location.pathname;
 
     const navLinks = [
-        { to: "/", label: "Home", icon: <FaHome /> },
-        { to: "/collections", label: "Collections", icon: <FaStore /> },
-        { to: "/mens-wear", label: "Earring Elegance", icon: <FaGem /> },
-        { to: "/womens-wear", label: "Rings", icon: <FaRing /> },
-        { to: "/accessories", label: "Accessories", icon: <FaGift /> },
-        { to: "/cart", label: "Cart", icon: <FaShoppingCart /> },
-        { to: "/about", label: "About", icon: <FaInfoCircle /> },
+        { to: "/", label: "Home" },
+        { to: "/collections", label: "Collections" },
+        { to: "/mens-wear", label: "Earring Elegance" },
+        { to: "/womens-wear", label: "Rings" },
+        { to: "/accessories", label: "Accessories" },
+        { to: "/cart", label: "Cart" },
+        { to: "/about", label: "About" },
     ];
 
     return (
@@ -85,7 +78,7 @@ const Header = () => {
             </div>
 
             <nav className="nav-links-section" aria-label="Main Navigation">
-                {navLinks.map(({ to, icon, label }) => {
+                {navLinks.map(({ to, label }) => {
                     const isSpecificActive = (to === '/' && currentPath === '/') || (to !== '/' && currentPath.startsWith(to));
 
                     return (
@@ -96,7 +89,6 @@ const Header = () => {
                             aria-current={isSpecificActive ? "page" : undefined}
                             title={label}
                         >
-                            <span className="nav-link-icon">{icon}</span>
                             <span>{label}</span>
                         </Link>
                     );
@@ -296,9 +288,9 @@ const Header = () => {
                      .nav-link-item span {
                         text-align: center;
                         width: 100%;
-                     }
+                    }
                     .nav-link-icon {
-                        font-size: 14px; /* Slightly smaller icons for 3 tabs */
+                        display: none; /* Hide icon on mobile 3-tab layout */
                     }
                 }
 
@@ -352,7 +344,7 @@ const Header = () => {
                 /* Hover effect: Only change icon and text color */
                 .nav-link-item:hover {
                     color: var(--primary-color);
-                    background-color: transparent;
+                    background-color: transparent; /* Keep background transparent on hover */
                     box-shadow: none;
                     transform: translateY(-2px);
                 }
@@ -363,9 +355,7 @@ const Header = () => {
                     box-shadow: none;
                 }
                 .nav-link-icon {
-                    font-size: 15px;
-                    display: flex;
-                    align-items: center;
+                    display: none; /* Hide all icons in nav links */
                 }
 
                 .user-action-section {
@@ -587,7 +577,7 @@ const Header = () => {
                         transform: translateY(0);
                     }
                     .nav-link-icon {
-                        font-size: 18px;
+                        display: none; /* Hide all icons on larger screens too */
                     }
                     .user-action-section {
                         margin-top: 0;
@@ -599,12 +589,12 @@ const Header = () => {
                         flex-shrink: 0;
                     }
                     .user-email-display {
-                        max-width: 150px;
+                        max-width: 15px;
                     }
                     .auth-button {
-                        padding: 10px 25px;
-                        border-radius: 30px;
-                        min-width: 160px;
+                        padding: 2px;
+                        border-radius: 25px;
+                        min-width: 4px;
                     }
                     .profile-icon {
                         font-size: 22px;
