@@ -1,46 +1,122 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
 import { FaHeartBroken, FaShoppingBag, FaBoxes, FaArrowLeft } from "react-icons/fa";
+import { ref, onValue, remove } from "firebase/database"; // Firebase Realtime Database imports
+import { auth, database } from "./firebase"; // Assuming firebase.js exports both auth and database
+import { onAuthStateChanged } from "firebase/auth"; // Firebase Auth import
 
 const Wishlist = () => {
-    // Mock wishlist data for demonstration.
-    // In a real application, you'd fetch this from a backend or local storage.
-    const [wishlistItems, setWishlistItems] = useState([
-        {
-            id: "1",
-            name: "Elegant Pearl Necklace",
-            price: 7999,
-            image: "https://via.placeholder.com/150/FFC0CB/000000?text=PearlNecklace",
-            description: "A timeless piece with lustrous pearls.",
-        },
-        {
-            id: "2",
-            name: "Sapphire Stud Earrings",
-            price: 4500,
-            image: "https://via.placeholder.com/150/ADD8E6/000000?text=SapphireEarrings",
-            description: "Deep blue sapphire studs for a touch of elegance.",
-        },
-        {
-            id: "3",
-            name: "Emerald Green Ring",
-            price: 12500,
-            image: "https://via.placeholder.com/150/90EE90/000000?text=EmeraldRing",
-            description: "Exquisite emerald ring, perfect for special occasions.",
-        },
-    ]);
+    // State to store the logged-in user
+    const [user, setUser] = useState(null);
+    // State to hold the user's wishlist items, initially empty
+    const [wishlistItems, setWishlistItems] = useState([]);
+    // State for loading status (e.g., checking auth, fetching data)
+    const [isLoading, setIsLoading] = useState(true);
+    const navigate = useNavigate(); // Initialize navigate hook for redirection
 
-    // Function to remove an item from the wishlist
-    const handleRemoveFromWishlist = (itemId) => {
-        setWishlistItems((prevItems) =>
-            prevItems.filter((item) => item.id !== itemId)
-        );
-        // In a real app, you'd also send this update to your backend/storage.
-        console.log(`Item with ID ${itemId} removed from wishlist.`);
+    // Effect to listen for Firebase authentication state changes
+    useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            setIsLoading(false); // Authentication check is complete
+        });
+        // Cleanup the authentication subscription when the component unmounts
+        return () => unsubscribeAuth();
+    }, []);
+
+    // Effect to fetch the user's wishlist once the user object is available
+    useEffect(() => {
+        // Only proceed if a user is logged in
+        if (user) {
+            // Create a reference to the specific user's wishlist in Firebase
+            // Data structure: /wishlists/{user.uid}/{productId}: { ...productData }
+            const wishlistRef = ref(database, `wishlists/${user.uid}`);
+
+            // Set up a real-time listener for changes in the wishlist
+            const unsubscribeWishlist = onValue(wishlistRef, (snapshot) => {
+                const data = snapshot.val(); // Get the data as a JavaScript object
+                if (data) {
+                    // Convert the object of wishlist items into an array for easier rendering
+                    const itemsArray = Object.entries(data).map(([id, item]) => ({
+                        id, // Firebase key is the product ID
+                        ...item // Rest of the product data
+                    }));
+                    setWishlistItems(itemsArray);
+                } else {
+                    setWishlistItems([]); // If no data, the wishlist is empty
+                }
+                setIsLoading(false); // Data fetching is complete
+            }, (error) => {
+                // Log and alert if there's an error fetching wishlist data
+                console.error("Error fetching user wishlist:", error.code, error.message, error);
+                alert(`Error fetching wishlist: ${error.message || "Please try again."}`);
+                setWishlistItems([]); // Clear wishlist on error
+                setIsLoading(false); // Data fetching attempt is complete
+            });
+
+            // Cleanup the wishlist data subscription when the component unmounts or user changes
+            return () => unsubscribeWishlist();
+        } else {
+            // If no user is logged in, clear the wishlist and set loading to false
+            setWishlistItems([]);
+            setIsLoading(false);
+        }
+    }, [user]); // This effect runs whenever the 'user' state changes
+
+    // Function to remove an item from the wishlist in Firebase
+    const handleRemoveFromWishlist = async (productId) => {
+        if (!user) {
+            alert("You must be logged in to remove items from your wishlist.");
+            return;
+        }
+
+        // Create a reference to the specific item to be removed
+        const itemToRemoveRef = ref(database, `wishlists/${user.uid}/${productId}`);
+
+        try {
+            await remove(itemToRemoveRef); // Execute the remove operation in Firebase
+            // The onValue listener will automatically update the local state,
+            // so no need to manually filter `setWishlistItems` here.
+            alert("Item removed from wishlist!");
+            console.log(`Item with ID ${productId} removed from Firebase wishlist.`);
+        } catch (error) {
+            // Log and alert if there's an error during removal
+            console.error("Error removing from wishlist:", error.code, error.message, error);
+            alert(`Failed to remove item from wishlist. Error: ${error.message || "Unknown error"}`);
+        }
     };
+
+    // Show loading status while authentication is being checked or data is being fetched
+    if (isLoading) {
+        return (
+            <div className="wishlist-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
+                <p style={{ fontSize: "1.5em", color: "var(--primary-color)" }}>Loading wishlist...</p>
+            </div>
+        );
+    }
+
+    // Redirect to login if not logged in after authentication check is complete
+    if (!user) {
+        return (
+            <div className="wishlist-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
+                <div className="empty-wishlist" style={{ boxShadow: "0 8px 25px rgba(0,255,231,0.3)" }}>
+                    <FaHeartBroken className="empty-icon" />
+                    <h2>You must be logged in to view your wishlist.</h2>
+                    <p>Please log in to see your saved items or add new ones.</p>
+                    <button
+                        onClick={() => navigate('/login')} // Use navigate for programmatic redirection
+                        className="browse-button" // Reuse existing button style
+                    >
+                        <FaArrowLeft /> Go to Login Page
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>
-            {/* CSS embedded directly in the component */}
+            {/* CSS embedded directly in the component (as per your original code) */}
             <style jsx>{`
                 /* CSS Variables for consistency */
                 :root {
@@ -150,6 +226,8 @@ const Wishlist = () => {
                     font-size: 1.1em;
                     transition: all 0.3s ease;
                     box-shadow: 0 4px 15px rgba(0,255,231,0.4);
+                    border: none; /* Ensure no default button border */
+                    cursor: pointer; /* Ensure cursor is pointer for buttons */
                 }
 
                 .browse-button:hover {
@@ -265,7 +343,7 @@ const Wishlist = () => {
                     box-shadow: 0 4px 15px rgba(255,77,77,0.6);
                 }
 
-                .add-to-cart-button {
+                .add-to-cart-button { /* Renamed from add-to-cart-button to view-item-button in JSX to be more accurate */
                     background-color: var(--primary-color);
                     color: var(--button-text-dark);
                     border: none;
@@ -290,9 +368,11 @@ const Wishlist = () => {
                     }
                     70% {
                         transform: scale(0.9);
+                        opacity: 1;
                     }
                     100% {
                         transform: scale(1);
+                        opacity: 1;
                     }
                 }
 
@@ -451,7 +531,9 @@ const Wishlist = () => {
                         <FaHeartBroken className="empty-icon" />
                         <h2>Your Wishlist is Empty!</h2>
                         <p>Looks like you haven't added anything yet. Start Browse to find your favorites.</p>
-                        <Link to="/collections" className="browse-button">
+                        {/* Changed Link target from "/collections" to "/" as a common fallback for home/browse.
+                            Adjust if you have a specific /collections route. */}
+                        <Link to="/" className="browse-button">
                             <FaShoppingBag /> Browse Products
                         </Link>
                     </div>
@@ -460,22 +542,33 @@ const Wishlist = () => {
                         {wishlistItems.map((item) => (
                             <div key={item.id} className="wishlist-item-card">
                                 <div className="item-image-wrapper">
-                                    <img src={item.image} alt={item.name} className="item-image" />
+                                    {/* Using item.image and item.title from Firebase data */}
+                                    <img src={item.image} alt={item.title} className="item-image" />
                                 </div>
                                 <div className="item-details">
-                                    <h3 className="item-name">{item.name}</h3>
-                                    <p className="item-description">{item.description}</p>
-                                    <p className="item-price">₹{item.price.toLocaleString()}</p>
+                                    {/* Using item.title from Firebase data */}
+                                    <h3 className="item-name">{item.title}</h3>
+                                    {/* Using item.brand and item.category from Firebase data (description might not be there) */}
+                                    <p className="item-description">Brand: {item.brand || "N/A"} | Category: {item.category || "N/A"}</p>
+                                    {/* Using item.price from Firebase data */}
+                                    <p className="item-price">₹{item.price ? item.price.toLocaleString() : "N/A"}</p>
+                                    {/* Displaying addedDate if available from Firebase */}
+                                    {item.addedDate && (
+                                        <p style={{ fontSize: "0.8em", color: "var(--light-text-color)", marginTop: "5px" }}>
+                                            Added: {new Date(item.addedDate).toLocaleDateString()}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="item-actions">
                                     <button
                                         onClick={() => handleRemoveFromWishlist(item.id)}
                                         className="remove-button"
-                                        title={`Remove ${item.name}`}
+                                        title={`Remove ${item.title}`}
                                     >
                                         <FaHeartBroken /> Remove
                                     </button>
-                                    <Link to={`/product/${item.id}`} className="add-to-cart-button" title={`View ${item.name} details`}>
+                                    {/* Assuming a product detail page exists at /product/:id */}
+                                    <Link to={`/product/${item.id}`} className="add-to-cart-button" title={`View ${item.title} details`}>
                                         <FaShoppingBag /> View Item
                                     </Link>
                                 </div>

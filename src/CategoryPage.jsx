@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { database } from "./firebase";
-import { ref, onValue, query, orderByChild, equalTo, push, update, set, remove } from "firebase/database";
+import { ref, onValue, query, orderByChild, equalTo, push, update, set, remove, get } from "firebase/database"; // <-- Ensure 'get' is imported here
 import { useNavigate } from "react-router-dom";
 import useAuthStatus from "./hooks/useAuthStatus";
 import loadScript from "./loadRazorpayScript";
@@ -156,7 +156,8 @@ const CategoryPage = ({ category }) => {
         const wishlistProductRef = ref(database, `wishlists/${user.uid}/${selectedProduct.id}`);
 
         try {
-            const snapshot = await onValue(wishlistProductRef, (snap) => snap.val(), { onlyOnce: true });
+            // FIX: Use get() for a one-time read instead of onValue() for snapshot existence check
+            const snapshot = await get(wishlistProductRef); // <-- THIS LINE IS FIXED
 
             if (snapshot.exists()) {
                 alert(`${selectedProduct.title} is already in your wishlist!`);
@@ -173,8 +174,8 @@ const CategoryPage = ({ category }) => {
                 alert(`${selectedProduct.title} added to your wishlist!`);
             }
         } catch (error) {
-            console.error("Error adding to wishlist:", error);
-            alert("Failed to add product to wishlist. Please try again.");
+            console.error("Error adding to wishlist:", error.code, error.message, error); // Enhanced logging
+            alert(`Failed to add product to wishlist. Please try again. Error: ${error.message || 'Unknown error'}`); // More specific user alert
         } finally {
             setShowSelectionModal(false);
             setSelectedProduct(null);
@@ -669,19 +670,31 @@ const CategoryPage = ({ category }) => {
                             </div>
                         </div>
 
-                        <div className="text-center mt-6">
-                            <p className="text-2xl font-bold mb-4 text-emerald-700">
-                                Total: ₹{(selectedProduct ? parseFloat(selectedProduct.price) * quantity : 0).toFixed(2)}
-                            </p>
-                            <button
-                                onClick={handleCreateOrder}
-                                className={`w-full py-3 rounded-full text-lg font-semibold transition-colors duration-200 ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-                                    } text-white`}
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? "Processing Payment..." : "Proceed to Payment"}
-                            </button>
-                        </div>
+                        <p className="text-2xl font-bold mb-6 text-emerald-800 text-center">
+                            Total Amount: ₹{(selectedProduct ? selectedProduct.price * quantity : 0).toFixed(2)}
+                        </p>
+
+                        <button
+                            onClick={handleCreateOrder}
+                            disabled={isSubmitting}
+                            className={`w-full py-3 rounded-full text-lg font-semibold transition-colors duration-200 ${isSubmitting ? "bg-blue-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                                } text-white`}
+                        >
+                            {isSubmitting ? "Processing Order..." : "Proceed to Payment"}
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (!isSubmitting) {
+                                    setSelectedProduct(null);
+                                    setShowSelectionModal(false); // Ensure both modals are closed
+                                }
+                            }}
+                            disabled={isSubmitting}
+                            className={`w-full bg-red-500 text-white py-3 rounded-full text-lg font-semibold mt-3 hover:bg-red-600 transition-colors duration-200 ${isSubmitting ? "cursor-not-allowed" : ""
+                                }`}
+                        >
+                            Cancel
+                        </button>
                     </div>
                 </div>
             )}
