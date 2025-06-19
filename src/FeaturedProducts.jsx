@@ -8,7 +8,7 @@ import { ref, onValue } from 'firebase/database';
 const autoScrollStyles = `
 @keyframes scrollProductsInfinite {
     0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); } /* Scrolls half the width for continuous loop */
+    100% { transform: translateX(-50%); } /* Still -50% because productsToDisplay is duplicated once */
 }
 
 /* Hide scrollbar for Webkit browsers (Chrome, Safari) */
@@ -36,28 +36,24 @@ const FeaturedProducts = () => {
         const unsubscribe = onValue(productsRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                // Convert the object of products into an array for easier mapping
                 const loadedProducts = Object.entries(data).map(([id, product]) => ({
-                    id, // Firebase auto-generated unique key
+                    id,
                     ...product,
                 }));
                 setProducts(loadedProducts);
             } else {
-                setProducts([]); // No products found
+                setProducts([]);
             }
-            setLoading(false); // Data loading is complete
+            setLoading(false);
         }, (err) => {
-            // Error handling for fetching data
             console.error("Error fetching products:", err);
             setError("Failed to load products. Please try again later.");
             setLoading(false);
         });
 
-        // Cleanup function to detach the Firebase listener when the component unmounts
         return () => unsubscribe();
-    }, []); // Empty dependency array ensures this runs only once on component mount
+    }, []);
 
-    // Conditional rendering for loading, error, or no products
     if (loading || error || products.length === 0) {
         return (
             <section
@@ -83,58 +79,76 @@ const FeaturedProducts = () => {
     // This creates an array that is twice the length, so when the first set scrolls off, the second set seamlessly appears
     const productsToDisplay = [...products, ...products];
 
+    // Calculate animation duration dynamically based on the number of original products.
+    // The -50% translation means we scroll exactly half of the total duplicated content,
+    // which corresponds to the full width of the original products.
+    const animationDuration = products.length * 5; // 5 seconds per product is a reasonable speed
+
     return (
         <section
-            className="py-12 px-4 bg-gray-100" // Tailwind classes for padding, background, etc.
+            className="py-12 px-4 bg-gray-100"
             style={{ fontFamily: "'Poppins', sans-serif", userSelect: "none" }}
             aria-label="Featured products section"
         >
             {/* Inject the auto-scroll keyframe styles into the DOM */}
-            <style>{autoScrollStyles}</style>
+            {/* We're dynamically setting the duration for the animation here */}
+            <style>
+                {`
+                @keyframes scrollProductsInfinite {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                .hide-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+                .hide-scrollbar {
+                    scrollbar-width: none;
+                }
+                .hide-scrollbar {
+                    -ms-overflow-style: none;
+                }
+                `}
+            </style>
 
-            <div className="container mx-auto overflow-hidden"> {/* Added overflow-hidden to contain the scrolling */}
+            <div className="container mx-auto overflow-hidden">
                 <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">
                     Our Latest Arrivals
                 </h2>
 
-                {/* Horizontal Scrolling Product Row */}
                 <div
-                    className="flex flex-nowrap hide-scrollbar" // Use flex-nowrap to keep items on one line, hide-scrollbar for clean look
+                    className="flex flex-nowrap hide-scrollbar"
                     style={{
-                        // Animation duration scales with the number of products for consistent speed
-                        // 5s per product in the original list, so 20s for 4 products to scroll one full loop
-                        animation: `scrollProductsInfinite ${products.length * 5}s linear infinite`,
+                        animation: `scrollProductsInfinite ${animationDuration}s linear infinite`,
                         minWidth: 'fit-content', // Ensure the container respects its content's width
+                        // Add some space at the end to prevent last item from sticking to the edge on reset
+                        // This might require more nuanced calculation if you have very specific widths.
+                        // For now, `minWidth: 'fit-content'` combined with `translateX(-50%)`
+                        // and duplicated content should work for a basic infinite scroll.
                     }}
                 >
                     {productsToDisplay.map((product, index) => (
                         <div
-                            // Using a combined key for duplicated items to ensure uniqueness
-                            key={`${product.id}-${index}`}
-                            className="flex-none w-72 mr-6 bg-white rounded-lg shadow-md overflow-hidden" // flex-none ensures fixed width, w-72 for card width
+                            key={`${product.id}-${index}`} // Combined key for uniqueness
+                            className="flex-none w-72 mr-6 bg-white rounded-lg shadow-md overflow-hidden"
                             style={{ minWidth: '288px' }} // Explicit min-width to prevent shrinking
                         >
                             <img
                                 src={product.image}
                                 alt={product.title}
-                                className="w-full h-56 object-cover" // Fixed height for consistent card appearance
-                                loading="lazy" // Optimize image loading
+                                className="w-full h-56 object-cover"
+                                loading="lazy"
                             />
                             <div className="p-4">
                                 <h3 className="text-lg font-semibold text-gray-900 truncate">
                                     {product.title}
                                 </h3>
                                 <p className="text-gray-700 font-bold mt-1">
-                                    ₹ {parseFloat(product.price).toFixed(2)} {/* Format price to 2 decimal places */}
+                                    ₹ {parseFloat(product.price).toFixed(2)}
                                 </p>
                                 <p className="text-sm text-gray-500">{product.brand}</p>
-                                <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full mt-2 inline-block">
-                                    {/* Format category string (e.g., "mens-wear" -> "Men's Wear") */}
-                                    {product.category.replace(/-/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                                </span>
-                                {/* Link to the product detail page */}
+                                {/* Category display (removed as per previous request) */}
                                 <Link
-                                    to={`/product/${product.id}`} // Dynamic link using product.id
+                                    to={`/product/${product.id}`}
                                     className="mt-4 block w-full bg-blue-600 text-white py-2 rounded-md font-semibold hover:bg-blue-700 transition text-center"
                                 >
                                     View Details
