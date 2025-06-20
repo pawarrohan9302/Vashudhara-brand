@@ -57,7 +57,7 @@ const Cart = () => {
                 await remove(itemRef);
                 alert("Item removed from cart.");
             } else {
-                await update(itemRef, { quantity, addedAt: new Date().toISOString() });
+                await update(itemRef, { quantity }); // ✅ No addedAt here
             }
         } catch (error) {
             console.error("Error updating quantity:", error);
@@ -110,7 +110,7 @@ const Cart = () => {
         const totalAmount = calculateCartTotal().toFixed(2);
 
         const options = {
-            key: "rzp_test_Wj5c933q6luams", // Replace with your Razorpay key
+            key: "rzp_test_Wj5c933q6luams",
             amount: totalAmount * 100,
             currency: "INR",
             name: "Vashudhara Fashion",
@@ -118,7 +118,6 @@ const Cart = () => {
             image: "/favicon.png",
             handler: function (response) {
                 alert("Payment successful!\nPayment ID: " + response.razorpay_payment_id);
-                // Optional: clear cart, store order data in Firebase
             },
             prefill: {
                 name: user?.displayName || "Customer",
@@ -179,57 +178,62 @@ const Cart = () => {
                 ) : (
                     <>
                         <div className="space-y-6">
-                            {cartItems.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="bg-gray-100 rounded-xl shadow-lg flex flex-col sm:flex-row items-center p-4 sm:p-6 gap-4"
-                                >
-                                    <img
-                                        src={item.productImage || "https://via.placeholder.com/100"}
-                                        alt={item.productTitle}
-                                        className="w-32 h-32 object-cover rounded-lg"
-                                    />
-                                    <div className="flex-grow text-center sm:text-left">
-                                        <h3 className="text-xl sm:text-2xl font-bold text-green-800 mb-2">
-                                            {item.productTitle || 'Unknown Product'}
-                                        </h3>
-                                        <p className="text-gray-700 text-sm">Brand: {item.brand || 'N/A'}</p>
-                                        <p className="text-gray-700 text-sm">Size: {item.size || 'N/A'}</p>
-                                        <p className="text-lg font-semibold text-gray-900 mt-1">
-                                            Price: ₹{parseFloat(item.price).toFixed(2)}
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="flex items-center space-x-2">
+                            {cartItems.map((item) => {
+                                const quantity = parseInt(item.quantity) || 1;
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className="bg-gray-100 rounded-xl shadow-lg flex flex-col sm:flex-row items-center p-4 sm:p-6 gap-4"
+                                    >
+                                        <img
+                                            src={item.productImage || "https://via.placeholder.com/100"}
+                                            alt={item.productTitle}
+                                            className="w-32 h-32 object-cover rounded-lg"
+                                        />
+                                        <div className="flex-grow text-center sm:text-left">
+                                            <h3 className="text-xl sm:text-2xl font-bold text-green-800 mb-2">
+                                                {item.productTitle || 'Unknown Product'}
+                                            </h3>
+                                            <p className="text-gray-700 text-sm">Brand: {item.brand || 'N/A'}</p>
+                                            <p className="text-gray-700 text-sm">Size: {item.size || 'N/A'}</p>
+                                            <p className="text-lg font-semibold text-gray-900 mt-1">
+                                                Price: ₹{parseFloat(item.price).toFixed(2)}
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-col items-center gap-2">
+                                            <div className="flex items-center space-x-2">
+                                                <button
+                                                    onClick={() => handleQuantityChange(item.id, quantity - 1)}
+                                                    className="bg-gray-300 text-gray-800 px-2 rounded-md"
+                                                >
+                                                    -
+                                                </button>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={quantity}
+                                                    onChange={(e) =>
+                                                        handleQuantityChange(item.id, parseInt(e.target.value) || 1)
+                                                    }
+                                                    className="w-16 p-2 rounded-lg border text-center"
+                                                />
+                                                <button
+                                                    onClick={() => handleQuantityChange(item.id, quantity + 1)}
+                                                    className="bg-gray-300 text-gray-800 px-2 rounded-md"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
                                             <button
-                                                onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                                className="bg-gray-300 text-gray-800 px-2 rounded-md"
+                                                onClick={() => handleRemoveItem(item.id)}
+                                                className="text-red-500 hover:text-red-700 text-sm"
                                             >
-                                                -
-                                            </button>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                value={item.quantity}
-                                                onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                                className="w-16 p-2 rounded-lg border text-center"
-                                            />
-                                            <button
-                                                onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                                className="bg-gray-300 text-gray-800 px-2 rounded-md"
-                                            >
-                                                +
+                                                Remove
                                             </button>
                                         </div>
-                                        <button
-                                            onClick={() => handleRemoveItem(item.id)}
-                                            className="text-red-500 hover:text-red-700 text-sm"
-                                        >
-                                            Remove
-                                        </button>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
 
                         <div className="mt-8 p-6 bg-gray-100 rounded-xl shadow-lg">

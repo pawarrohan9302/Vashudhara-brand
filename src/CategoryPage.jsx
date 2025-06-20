@@ -1,9 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { database } from "./firebase";
-import { ref, onValue, query, orderByChild, equalTo, push, update, set, remove, get } from "firebase/database"; // <-- Ensure 'get' is imported here
+import { ref, onValue, query, orderByChild, equalTo, push, update, set, remove, get } from "firebase/database";
 import { useNavigate } from "react-router-dom";
 import useAuthStatus from "./hooks/useAuthStatus";
 import loadScript from "./loadRazorpayScript";
+
+// Define the mapping outside the component for better performance and readability
+const CATEGORY_HEADINGS = {
+    "mens-wear": "Earrings", // Adjusted based on common men's wear items
+    "womens-wear": "Rings", // As requested, if this is truly what you meant for the main women's heading
+    "accessories": "Bracelets",
+    "rings": "Rings" // Assuming 'Rings' is a sub-category or a specific category now
+    // Add more mappings as needed, e.g.:
+    // "watches": "Luxury Watches",
+    // "shoes": "Footwear Collection",
+};
 
 const CategoryPage = ({ category }) => {
     const { loggedIn, checkingStatus, user } = useAuthStatus();
@@ -156,8 +167,7 @@ const CategoryPage = ({ category }) => {
         const wishlistProductRef = ref(database, `wishlists/${user.uid}/${selectedProduct.id}`);
 
         try {
-            // FIX: Use get() for a one-time read instead of onValue() for snapshot existence check
-            const snapshot = await get(wishlistProductRef); // <-- THIS LINE IS FIXED
+            const snapshot = await get(wishlistProductRef);
 
             if (snapshot.exists()) {
                 alert(`${selectedProduct.title} is already in your wishlist!`);
@@ -174,8 +184,8 @@ const CategoryPage = ({ category }) => {
                 alert(`${selectedProduct.title} added to your wishlist!`);
             }
         } catch (error) {
-            console.error("Error adding to wishlist:", error.code, error.message, error); // Enhanced logging
-            alert(`Failed to add product to wishlist. Please try again. Error: ${error.message || 'Unknown error'}`); // More specific user alert
+            console.error("Error adding to wishlist:", error.code, error.message, error);
+            alert(`Failed to add product to wishlist. Please try again. Error: ${error.message || 'Unknown error'}`);
         } finally {
             setShowSelectionModal(false);
             setSelectedProduct(null);
@@ -400,11 +410,14 @@ const CategoryPage = ({ category }) => {
         );
     }
 
+    // Determine the heading text based on the CATEGORY_HEADINGS map
+    const displayHeading = CATEGORY_HEADINGS[category] || category.replace("-", " ");
+
     return (
         <section className="bg-white min-h-screen py-16 px-5 font-poppins text-gray-800">
             <div className="max-w-3xl mx-auto text-center mb-10">
                 <h1 className="text-4xl font-bold mb-3 text-emerald-700 capitalize">
-                    {category.replace("-", " ")}
+                    {displayHeading}
                 </h1>
                 <p className="text-lg text-slate-600">
                     Discover our latest {category.replace("-", " ")} products.
@@ -658,7 +671,7 @@ const CategoryPage = ({ category }) => {
                                 {pincodeError && !district && <p className="text-xs text-yellow-600 mt-1">Please fill District manually.</p>}
                             </div>
                             <div>
-                                <label htmlFor="village" className="block text-sm font-semibold mb-1 text-gray-600">Village/Town/City:</label>
+                                <label htmlFor="village" className="block text-sm font-semibold mb-1 text-gray-600">Village:</label>
                                 <input
                                     id="village"
                                     type="text"
@@ -671,29 +684,16 @@ const CategoryPage = ({ category }) => {
                         </div>
 
                         <p className="text-2xl font-bold mb-6 text-emerald-800 text-center">
-                            Total Amount: ₹{(selectedProduct ? selectedProduct.price * quantity : 0).toFixed(2)}
+                            Total: ₹{(selectedProduct.price * quantity).toFixed(2)}
                         </p>
 
                         <button
                             onClick={handleCreateOrder}
                             disabled={isSubmitting}
-                            className={`w-full py-3 rounded-full text-lg font-semibold transition-colors duration-200 ${isSubmitting ? "bg-blue-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-                                } text-white`}
-                        >
-                            {isSubmitting ? "Processing Order..." : "Proceed to Payment"}
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (!isSubmitting) {
-                                    setSelectedProduct(null);
-                                    setShowSelectionModal(false); // Ensure both modals are closed
-                                }
-                            }}
-                            disabled={isSubmitting}
-                            className={`w-full bg-red-500 text-white py-3 rounded-full text-lg font-semibold mt-3 hover:bg-red-600 transition-colors duration-200 ${isSubmitting ? "cursor-not-allowed" : ""
+                            className={`w-full py-3 rounded-full text-lg font-semibold transition-colors duration-200 ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 text-white"
                                 }`}
                         >
-                            Cancel
+                            {isSubmitting ? "Processing Payment..." : "Proceed to Payment"}
                         </button>
                     </div>
                 </div>
