@@ -1,9 +1,10 @@
+// src/ProductDetail.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { database } from './firebase'; // Ensure correct path to firebase.js
 import { ref, onValue, update, get, push, set } from 'firebase/database'; // Import push and set
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { toast } from 'react-toastify';
+import { toast } from 'react-toastify'; // Make sure you have react-toastify installed
 import {
     MdOutlineLocalShipping,
     MdOutlineRestore,
@@ -195,26 +196,22 @@ const ProductDetail = () => {
             return;
         }
 
-        const userCartItemRef = ref(database, `carts/${user.uid}/${product.id}`);
+        // Use a combined ID for cart items to differentiate by product and size
+        const cartItemId = selectedSize ? `${product.id}_${selectedSize}` : product.id;
+        const userCartItemRef = ref(database, `carts/${user.uid}/${cartItemId}`);
 
         try {
             const snapshot = await get(userCartItemRef);
             const existingItem = snapshot.val();
 
             let newQuantity = quantityToAdd;
-            // A more robust cart might differentiate by product ID + size
-            // For simplicity, here we update the quantity if the size matches,
-            // otherwise, it might overwrite if the product ID is the same but size differs.
-            // Consider using a unique key like `${product.id}_${selectedSize}` in Firebase for cart items
-            if (existingItem && existingItem.size === selectedSize) {
+            if (existingItem) {
                 newQuantity += existingItem.quantity;
-            } else if (existingItem && existingItem.size !== selectedSize) {
-                // If the product exists with a different size, you might want to add it as a new distinct item
-                // For now, it will update the existing entry with the new size and quantity.
-                toast.info(`Updated quantity and size for ${product.title} in your cart.`);
+                toast.info(`Updated quantity for "${product.title}" in your cart.`);
             }
 
             await update(userCartItemRef, {
+                productId: product.id, // Store original product ID
                 productTitle: product.title,
                 productImage: product.image,
                 price: parseFloat(product.price),
@@ -528,7 +525,7 @@ const ProductDetail = () => {
                                                 type="button"
                                                 onClick={() => setSelectedSize(sizeOption)}
                                                 className={`px-5 py-2 border rounded-lg text-lg font-medium transition duration-200
-                                                    ${selectedSize === sizeOption
+                                                ${selectedSize === sizeOption
                                                         ? 'bg-blue-600 text-white border-blue-600 shadow-md'
                                                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100 hover:border-gray-400'
                                                     }
@@ -599,6 +596,8 @@ const ProductDetail = () => {
                 </div>
             </div>
 
+            ---
+
             {/* --- Similar Products Section --- */}
             {similarProducts.length > 0 && (
                 <div className="max-w-7xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden p-6 md:p-10 mt-12">
@@ -609,23 +608,23 @@ const ProductDetail = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                         {similarProducts.map((p) => (
                             <Link
-                                key={p.id} // Added key prop for list rendering
-                                to={`/product/${p.id}`} // Corrected backtick for template literal
+                                key={p.id}
+                                to={`/product/${p.id}`}
                                 className="block bg-gray-50 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
                                 onClick={() => window.scrollTo(0, 0)} // Scroll to top on similar product click
                             >
                                 <img
                                     src={p.image || 'https://via.placeholder.com/400x400?text=No+Image'}
-                                    alt={p.title || 'Similar Product'}
+                                    alt={p.title || 'Product Image'}
                                     className="w-full h-48 object-cover rounded-t-lg"
                                 />
                                 <div className="p-4">
-                                    <h4 className="text-lg font-semibold text-gray-800 truncate">{p.title}</h4>
-                                    <p className="text-gray-600 text-sm mt-1">
-                                        {p.brand || 'N/A'}
-                                    </p>
-                                    <p className="text-lg font-bold text-green-700 mt-2">
-                                        ₹ {parseFloat(p.price || 0).toFixed(2)}
+                                    <h3 className="text-lg font-semibold text-gray-800 truncate mb-1">
+                                        {p.title}
+                                    </h3>
+                                    <p className="text-gray-600 text-sm mb-2">{p.brand}</p>
+                                    <p className="text-xl font-bold text-green-700">
+                                        ₹{parseFloat(p.price).toFixed(2)}
                                     </p>
                                 </div>
                             </Link>
@@ -634,121 +633,141 @@ const ProductDetail = () => {
                 </div>
             )}
 
-            {/* Customer Info Modal */}
+            {/* --- Customer Information Modal --- */}
             {showCustomerInfoModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
-                    <div className="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md animate-fade-in-up">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Enter Your Details</h2>
-                        <form onSubmit={handleProceedToPayment} className="space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100 opacity-100">
+                        <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-3">Enter Your Details</h2>
+                        <form onSubmit={handleProceedToPayment}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                                 <div>
-                                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">First Name <span className="text-red-500">*</span></label>
+                                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                                        First Name <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         id="firstName"
                                         value={firstName}
                                         onChange={(e) => setFirstName(e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                                         required
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name <span className="text-red-500">*</span></label>
+                                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Last Name <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         id="lastName"
                                         value={lastName}
                                         onChange={(e) => setLastName(e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                                         required
                                     />
                                 </div>
                             </div>
-                            <div>
-                                <label htmlFor="customerEmail" className="block text-sm font-medium text-gray-700">Email <span className="text-red-500">*</span></label>
+                            <div className="mb-4">
+                                <label htmlFor="customerEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Email <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="email"
                                     id="customerEmail"
                                     value={customerEmail}
                                     onChange={(e) => setCustomerEmail(e.target.value)}
-                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                                     required
                                 />
                             </div>
-                            <div>
-                                <label htmlFor="customerPhone" className="block text-sm font-medium text-gray-700">Phone Number <span className="text-red-500">*</span></label>
+                            <div className="mb-4">
+                                <label htmlFor="customerPhone" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Phone Number <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="tel"
                                     id="customerPhone"
                                     value={customerPhone}
                                     onChange={(e) => setCustomerPhone(e.target.value)}
-                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                    maxLength="10"
+                                    minLength="10"
                                     pattern="\d{10}"
-                                    title="Phone number must be 10 digits"
+                                    title="Please enter a 10-digit phone number"
                                     required
                                 />
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                                 <div>
-                                    <label htmlFor="pinCode" className="block text-sm font-medium text-gray-700">Pin Code <span className="text-red-500">*</span></label>
+                                    <label htmlFor="pinCode" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Pin Code <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         id="pinCode"
                                         value={pinCode}
                                         onChange={(e) => setPinCode(e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                        maxLength="6"
+                                        minLength="6"
                                         pattern="\d{6}"
-                                        title="Pin Code must be 6 digits"
+                                        title="Please enter a 6-digit Pin Code"
                                         required
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="state" className="block text-sm font-medium text-gray-700">State <span className="text-red-500">*</span></label>
+                                    <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
+                                        State <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         id="state"
                                         value={state}
                                         onChange={(e) => setState(e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                                         required
                                     />
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                                 <div>
-                                    <label htmlFor="district" className="block text-sm font-medium text-gray-700">District <span className="text-red-500">*</span></label>
+                                    <label htmlFor="district" className="block text-sm font-medium text-gray-700 mb-1">
+                                        District <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         id="district"
                                         value={district}
                                         onChange={(e) => setDistrict(e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                                         required
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="village" className="block text-sm font-medium text-gray-700">Village/Locality <span className="text-red-500">*</span></label>
+                                    <label htmlFor="village" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Village/Locality <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         id="village"
                                         value={village}
                                         onChange={(e) => setVillage(e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                                         required
                                     />
                                 </div>
                             </div>
-                            <div className="flex justify-end gap-3 mt-6">
+                            <div className="flex justify-end space-x-3">
                                 <button
                                     type="button"
                                     onClick={() => setShowCustomerInfoModal(false)}
-                                    className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 font-semibold hover:bg-gray-50 transition duration-200"
+                                    className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 font-semibold hover:bg-gray-100 transition duration-150"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-md shadow-md hover:bg-indigo-700 transition duration-200"
+                                    className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 transition duration-150"
                                 >
                                     Proceed to Payment
                                 </button>

@@ -65,6 +65,7 @@ const Hero = () => {
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",
+                backgroundAttachment: "fixed", // Added this line to fix the background image
                 color: "#fff",
                 padding: "180px 20px", // Increased padding
                 textAlign: "center",
