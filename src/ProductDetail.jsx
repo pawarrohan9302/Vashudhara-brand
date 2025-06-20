@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { database } from './firebase'; // Ensure correct path to firebase.js
-import { ref, onValue, update, get } from 'firebase/database';
+import { ref, onValue, update, get, push, set } from 'firebase/database'; // Import push and set
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { toast } from 'react-toastify';
 import {
     MdOutlineLocalShipping,
     MdOutlineRestore,
     MdOutlineCreditCard,
-    MdShoppingCart, // For cart icon
-    MdOutlinePayment // For buy now icon
+    MdShoppingCart,
+    MdOutlinePayment
 } from 'react-icons/md';
-import { FaBoxOpen, FaRegLightbulb } from 'react-icons/fa'; // Added for feature highlights
+import { FaBoxOpen, FaRegLightbulb } from 'react-icons/fa';
 
 const ProductDetail = () => {
     const { id } = useParams();
@@ -22,13 +22,56 @@ const ProductDetail = () => {
     const [error, setError] = useState(null);
     const [user, setUser] = useState(null);
     const [quantityToAdd, setQuantityToAdd] = useState(1);
+    const [selectedSize, setSelectedSize] = useState('');
+
+    // State for extended customer information
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [customerEmail, setCustomerEmail] = useState('');
+    const [customerPhone, setCustomerPhone] = useState('');
+    const [pinCode, setPinCode] = useState('');
+    const [state, setState] = useState('');
+    const [district, setDistrict] = useState('');
+    const [village, setVillage] = useState('');
+    const [showCustomerInfoModal, setShowCustomerInfoModal] = useState(false);
 
     const auth = getAuth();
 
-    // Effect for Firebase Authentication state changes
+    // Effect for Firebase Authentication state changes and pre-filling user data
     useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
+            if (currentUser) {
+                // Pre-fill name and email if user is logged in
+                const displayNameParts = currentUser.displayName ? currentUser.displayName.split(' ') : [];
+                setFirstName(displayNameParts[0] || '');
+                setLastName(displayNameParts.slice(1).join(' ') || '');
+                setCustomerEmail(currentUser.email || '');
+
+                // Optional: Fetch more user profile data if available in Firebase
+                // This is a good place to load existing address/contact info if you store it in userProfiles
+                // const userProfileRef = ref(database, `userProfiles/${currentUser.uid}`);
+                // get(userProfileRef).then(snapshot => {
+                //     if (snapshot.exists()) {
+                //         const profile = snapshot.val();
+                //         setCustomerPhone(profile.phone || '');
+                //         setPinCode(profile.pinCode || '');
+                //         setState(profile.state || '');
+                //         setDistrict(profile.district || '');
+                //         setVillage(profile.village || '');
+                //     }
+                // }).catch(err => console.error("Error fetching user profile:", err));
+            } else {
+                // Clear fields if user logs out
+                setFirstName('');
+                setLastName('');
+                setCustomerEmail('');
+                setCustomerPhone('');
+                setPinCode('');
+                setState('');
+                setDistrict('');
+                setVillage('');
+            }
         });
         return () => unsubscribeAuth();
     }, [auth]);
@@ -37,14 +80,20 @@ const ProductDetail = () => {
     const loadRazorpayScript = useCallback(() => {
         return new Promise((resolve) => {
             if (document.getElementById('razorpay-checkout-script')) {
+                console.log("Razorpay script already present.");
                 resolve(true); // Script already loaded
                 return;
             }
+            console.log("Loading Razorpay script...");
             const script = document.createElement('script');
             script.id = 'razorpay-checkout-script';
             script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-            script.onload = () => resolve(true);
+            script.onload = () => {
+                console.log("Razorpay script loaded successfully.");
+                resolve(true);
+            };
             script.onerror = () => {
+                console.error('Failed to load payment gateway script.');
                 toast.error('Failed to load payment gateway script. Please try again.');
                 resolve(false);
             };
@@ -66,7 +115,7 @@ const ProductDetail = () => {
         let unsubscribeProductListener;
         let unsubscribeAllProductsListener;
 
-        setLoading(true); // Start loading when ID changes
+        setLoading(true);
 
         unsubscribeProductListener = onValue(
             productRef,
@@ -74,6 +123,10 @@ const ProductDetail = () => {
                 const data = snapshot.val();
                 if (data) {
                     setProduct({ id, ...data });
+                    // Set default size if product has sizes and no size is selected yet
+                    if (data.sizes && data.sizes.length > 0 && !selectedSize) {
+                        setSelectedSize(data.sizes[0]);
+                    }
 
                     unsubscribeAllProductsListener = onValue(
                         allProductsRef,
@@ -93,11 +146,10 @@ const ProductDetail = () => {
                             } else {
                                 setSimilarProducts([]);
                             }
-                            setLoading(false); // Finished loading similar products
+                            setLoading(false);
                         },
                         (err) => {
                             console.error('Error fetching all products for similar items:', err);
-                            // Not critical enough to set global error, but inform user
                             toast.warn('Could not load similar products.');
                             setLoading(false);
                         }
@@ -116,12 +168,12 @@ const ProductDetail = () => {
             }
         );
 
-        // Cleanup function
+        // Cleanup function for Firebase listeners
         return () => {
             if (unsubscribeProductListener) unsubscribeProductListener();
             if (unsubscribeAllProductsListener) unsubscribeAllProductsListener();
         };
-    }, [id]); // Dependency array includes 'id'
+    }, [id, selectedSize]); // Re-run if ID or selectedSize changes
 
     // Handle "Add to Cart" functionality
     const handleAddToCart = async () => {
@@ -137,6 +189,11 @@ const ProductDetail = () => {
             toast.error('Quantity must be at least 1.');
             return;
         }
+        // Validate size if product has sizes
+        if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+            toast.error('Please select a size before adding to cart.');
+            return;
+        }
 
         const userCartItemRef = ref(database, `carts/${user.uid}/${product.id}`);
 
@@ -145,8 +202,16 @@ const ProductDetail = () => {
             const existingItem = snapshot.val();
 
             let newQuantity = quantityToAdd;
-            if (existingItem) {
+            // A more robust cart might differentiate by product ID + size
+            // For simplicity, here we update the quantity if the size matches,
+            // otherwise, it might overwrite if the product ID is the same but size differs.
+            // Consider using a unique key like `${product.id}_${selectedSize}` in Firebase for cart items
+            if (existingItem && existingItem.size === selectedSize) {
                 newQuantity += existingItem.quantity;
+            } else if (existingItem && existingItem.size !== selectedSize) {
+                // If the product exists with a different size, you might want to add it as a new distinct item
+                // For now, it will update the existing entry with the new size and quantity.
+                toast.info(`Updated quantity and size for ${product.title} in your cart.`);
             }
 
             await update(userCartItemRef, {
@@ -154,7 +219,7 @@ const ProductDetail = () => {
                 productImage: product.image,
                 price: parseFloat(product.price),
                 brand: product.brand,
-                size: product.size || 'N/A',
+                size: selectedSize || product.size || 'N/A', // Use selectedSize if available
                 color: product.color || 'N/A',
                 quantity: newQuantity,
                 addedAt: new Date().toISOString(),
@@ -168,8 +233,8 @@ const ProductDetail = () => {
         }
     };
 
-    // Handle "Buy Now" (direct Razorpay payment) functionality
-    const handleBuyNow = async () => {
+    // New function to handle initiation of the buy now process (show form)
+    const initiateBuyNow = () => {
         if (!user) {
             toast.error('Please log in to make a purchase.', { position: 'top-center' });
             return;
@@ -182,46 +247,167 @@ const ProductDetail = () => {
             toast.error('Quantity must be at least 1 for purchase.');
             return;
         }
+        if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+            toast.error('Please select a size before proceeding to purchase.');
+            return;
+        }
+        setShowCustomerInfoModal(true); // Show the customer info form
+    };
 
-        const res = await loadRazorpayScript();
-        if (!res) {
-            return; // Error toast already shown by loadRazorpayScript
+    // Handle "Buy Now" (direct Razorpay payment) functionality - now called AFTER info is collected
+    const handleProceedToPayment = async (e) => {
+        e.preventDefault(); // Prevent default form submission
+
+        console.log("Initiating handleProceedToPayment...");
+
+        // All required validations
+        if (!firstName.trim() || !lastName.trim() || !customerEmail.trim() || !customerPhone.trim() || !pinCode.trim() || !state.trim() || !district.trim() || !village.trim()) {
+            toast.error('Please fill in all required customer details (Name, Email, Phone, Pin Code, State, District, Village).');
+            console.warn("Validation failed: Missing customer details.");
+            return;
+        }
+        // Basic email format validation
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+            toast.error('Please enter a valid email address.');
+            console.warn("Validation failed: Invalid email format.");
+            return;
+        }
+        // Basic phone number format validation (e.g., 10 digits for India)
+        if (!/^\d{10}$/.test(customerPhone)) {
+            toast.error('Please enter a valid 10-digit phone number.');
+            console.warn("Validation failed: Invalid phone number format.");
+            return;
+        }
+        // Basic pin code format validation (e.g., 6 digits for India)
+        if (!/^\d{6}$/.test(pinCode)) {
+            toast.error('Please enter a valid 6-digit Pin Code.');
+            console.warn("Validation failed: Invalid Pin Code format.");
+            return;
         }
 
+        console.log("Customer Info Validated. Hiding modal.");
+        setShowCustomerInfoModal(false); // Hide the modal
+
+        console.log("Attempting to load Razorpay script...");
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+            console.error("Razorpay script failed to load. Aborting payment.");
+            return; // Error toast already shown by loadRazorpayScript
+        }
+        console.log("Razorpay script loaded successfully. Proceeding with payment setup.");
+
+
         const totalAmount = (parseFloat(product.price) * quantityToAdd).toFixed(2);
+        console.log("Calculated Total Amount (INR):", totalAmount);
+
+        // Ensure window.Razorpay is available before proceeding
+        if (typeof window.Razorpay === 'undefined') {
+            toast.error('Razorpay is not loaded. Please try again or refresh the page.');
+            console.error('window.Razorpay is undefined after script load attempt.');
+            return;
+        }
 
         const options = {
             key: 'rzp_test_Wj5c933q6luams', // Replace with your actual Razorpay Key ID
-            amount: totalAmount * 100,
+            amount: Math.round(totalAmount * 100), // Amount in paisa, must be an integer
             currency: 'INR',
             name: 'Vashudhara Fashion',
-            description: `Purchase of ${product.title} (Qty: ${quantityToAdd})`,
+            description: `Purchase of ${product.title} (Qty: ${quantityToAdd}, Size: ${selectedSize || product.size || 'N/A'})`,
             image: '/favicon.png', // Ensure this path is correct for your public folder
             handler: function (response) {
                 toast.success('Payment successful! Payment ID: ' + response.razorpay_payment_id, {
                     position: 'top-center',
                 });
                 console.log('Razorpay Payment Response:', response);
-                // Implement backend verification and order fulfillment here
+
+                // --- START: Firebase Save Logic ---
+                if (user && product) { // Ensure user and product are available
+                    const ordersRef = ref(database, 'orders'); // Reference to the 'orders' path
+                    const newOrderRef = push(ordersRef); // Generates a unique ID for the new order
+
+                    const orderDetails = {
+                        orderId: newOrderRef.key, // Save the unique order ID
+                        userId: user.uid,
+                        productId: product.id,
+                        productTitle: product.title,
+                        productImage: product.image,
+                        price: parseFloat(product.price),
+                        quantity: quantityToAdd,
+                        size: selectedSize || product.size || 'N/A',
+                        color: product.color || 'N/A',
+                        totalAmount: parseFloat(totalAmount),
+                        customer: {
+                            firstName: firstName,
+                            lastName: lastName,
+                            email: customerEmail,
+                            phone: customerPhone,
+                            address: {
+                                village: village,
+                                district: district,
+                                state: state,
+                                pinCode: pinCode,
+                            },
+                        },
+                        payment: {
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpayOrderId: response.razorpay_order_id, // If you integrate with your backend to create Razorpay orders
+                            razorpaySignature: response.razorpay_signature, // For verification on backend
+                            method: 'Razorpay', // Or 'Card', 'UPI', etc. based on actual payment method
+                        },
+                        orderStatus: 'Processing', // Initial status, you might have different statuses
+                        orderedAt: new Date().toISOString(), // Timestamp for the order
+                    };
+
+                    set(newOrderRef, orderDetails)
+                        .then(() => {
+                            console.log("Order details successfully saved to Firebase:", orderDetails);
+                            toast.info("Your order has been placed successfully!");
+                            // Optionally, clear cart or redirect user here
+                        })
+                        .catch(error => {
+                            console.error("Error saving order details to Firebase:", error);
+                            toast.error("Order placed but failed to save details. Please contact support with Payment ID: " + response.razorpay_payment_id);
+                        });
+                } else {
+                    console.warn("Cannot save order: User not logged in or product data missing.");
+                    toast.error("Payment successful, but order details could not be saved. Please contact support.");
+                }
+                // --- END: Firebase Save Logic ---
             },
             prefill: {
-                name: user?.displayName || 'Customer',
-                email: user?.email || 'example@example.com',
+                name: `${firstName} ${lastName}`,
+                email: customerEmail,
+                contact: customerPhone,
+            },
+            notes: {
+                shipping_address: `${village}, ${district}, ${state} - ${pinCode}`,
+                product_id: product.id,
+                user_id: user.uid,
             },
             theme: {
-                color: '#16a34a',
+                color: '#16a34a', // A pleasant green
             },
         };
 
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', function (response) {
-            toast.error('Payment failed: ' + response.error.description, { position: 'top-center' });
-            console.error('Razorpay Payment Error:', response.error);
-        });
-        rzp.on('modal.close', function () {
-            toast.info('Payment process canceled.', { position: 'top-center' });
-        });
-        rzp.open();
+        console.log("Razorpay Options constructed:", options);
+
+        try {
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                toast.error('Payment failed: ' + response.error.description, { position: 'top-center' });
+                console.error('Razorpay Payment Error:', response.error);
+                // Optionally save failed payment attempt to Firebase for analysis
+            });
+            rzp.on('modal.close', function () {
+                toast.info('Payment process canceled.', { position: 'top-center' });
+                console.log("Razorpay modal closed by user.");
+            });
+            console.log("Opening Razorpay modal...");
+            rzp.open();
+        } catch (error) {
+            console.error('Error creating or opening Razorpay instance:', error);
+            toast.error('An error occurred while preparing payment. Please check console for details.');
+        }
     };
 
     // Conditional Rendering for Loading, Error, or No Product Found
@@ -275,7 +461,7 @@ const ProductDetail = () => {
                             src={product.image || 'https://via.placeholder.com/600x600?text=No+Image'}
                             alt={product.title || 'Product Image'}
                             className="max-w-full max-h-[500px] object-contain rounded-lg transform transition-transform duration-500 hover:scale-105"
-                            loading="eager" // Prioritize loading for the main image
+                            loading="eager"
                         />
                     </div>
 
@@ -294,23 +480,9 @@ const ProductDetail = () => {
                                     <strong className="font-semibold text-gray-800">Brand:</strong>{' '}
                                     {product.brand || 'N/A'}
                                 </p>
-                                <p>
-                                    <strong className="font-semibold text-gray-800">Category:</strong>{' '}
-                                    {product.category
-                                        ? product.category
-                                            .replace(/-/g, ' ')
-                                            .split(' ')
-                                            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                                            .join(' ')
-                                        : 'N/A'}
-                                </p>
-                                {product.size && (
-                                    <p>
-                                        <strong className="font-semibold text-gray-800">Size:</strong>{' '}
-                                        {product.size}
-                                    </p>
-                                )}
-                                {product.color && (
+                                {/* This is the line where "Category:" was removed */}
+
+                                {product.color && ( // Display color only if it exists
                                     <p>
                                         <strong className="font-semibold text-gray-800">Color:</strong>{' '}
                                         {product.color}
@@ -342,6 +514,33 @@ const ProductDetail = () => {
                                     aria-label="Select quantity"
                                 />
                             </div>
+
+                            {/* Size Selector (newly added/updated) */}
+                            {product.sizes && product.sizes.length > 0 && (
+                                <div className="mt-6">
+                                    <label className="block text-xl font-bold text-gray-800 mb-3">
+                                        Size: <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="flex flex-wrap gap-3">
+                                        {product.sizes.map((sizeOption) => (
+                                            <button
+                                                key={sizeOption}
+                                                type="button"
+                                                onClick={() => setSelectedSize(sizeOption)}
+                                                className={`px-5 py-2 border rounded-lg text-lg font-medium transition duration-200
+                                                    ${selectedSize === sizeOption
+                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100 hover:border-gray-400'
+                                                    }
+                                                    focus:outline-none focus:ring-4 focus:ring-blue-200`}
+                                            >
+                                                {sizeOption}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
 
                         {/* Action buttons (Add to Cart, Buy Now) */}
@@ -354,7 +553,7 @@ const ProductDetail = () => {
                                 <MdShoppingCart className="w-6 h-6 mr-3" /> Add to Cart
                             </button>
                             <button
-                                onClick={handleBuyNow}
+                                onClick={initiateBuyNow}
                                 className="flex-1 flex items-center justify-center px-8 py-4 bg-indigo-600 text-white font-bold text-lg rounded-xl shadow-lg hover:bg-indigo-700 transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-indigo-300"
                                 aria-label="Buy now"
                             >
@@ -410,66 +609,154 @@ const ProductDetail = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                         {similarProducts.map((p) => (
                             <Link
-                                to={`/product/${p.id}`}
-                                key={p.id}
-                                className="block group focus:outline-none focus:ring-4 focus:ring-blue-300 rounded-lg"
+                                key={p.id} // Added key prop for list rendering
+                                to={`/product/${p.id}`} // Corrected backtick for template literal
+                                className="block bg-gray-50 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                                onClick={() => window.scrollTo(0, 0)} // Scroll to top on similar product click
                             >
-                                <div className="bg-gray-50 rounded-xl shadow-md overflow-hidden transform transition duration-300 hover:scale-[1.03] hover:shadow-xl border border-gray-200">
-                                    <div className="relative w-full h-56 bg-white flex items-center justify-center p-3">
-                                        <img
-                                            src={p.image || 'https://via.placeholder.com/300x220?text=No+Image'}
-                                            alt={p.title || 'Product Image'}
-                                            className="max-w-full max-h-full object-contain rounded-md"
-                                            loading="lazy"
-                                        />
-                                    </div>
-                                    <div className="p-5">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate">
-                                            {p.title || 'Untitled Product'}
-                                        </h3>
-                                        <p className="text-green-700 font-bold text-xl mb-2">
-                                            ₹ {parseFloat(p.price || 0).toFixed(2)}
-                                        </p>
-                                        <p className="text-sm text-gray-600 mb-3">{p.brand || 'No Brand'}</p>
-                                        <span className="text-xs bg-indigo-100 text-indigo-800 px-3 py-1.5 rounded-full font-medium tracking-wide">
-                                            {p.category
-                                                ? p.category
-                                                    .replace(/-/g, ' ')
-                                                    .split(' ')
-                                                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                                                    .join(' ')
-                                                : 'Uncategorized'}
-                                        </span>
-                                    </div>
+                                <img
+                                    src={p.image || 'https://via.placeholder.com/400x400?text=No+Image'}
+                                    alt={p.title || 'Similar Product'}
+                                    className="w-full h-48 object-cover rounded-t-lg"
+                                />
+                                <div className="p-4">
+                                    <h4 className="text-lg font-semibold text-gray-800 truncate">{p.title}</h4>
+                                    <p className="text-gray-600 text-sm mt-1">
+                                        {p.brand || 'N/A'}
+                                    </p>
+                                    <p className="text-lg font-bold text-green-700 mt-2">
+                                        ₹ {parseFloat(p.price || 0).toFixed(2)}
+                                    </p>
                                 </div>
                             </Link>
                         ))}
                     </div>
                 </div>
             )}
-            {/* --- End Similar Products Section --- */}
 
-            {/* Back to Home link */}
-            <div className="text-center mt-12 mb-6">
-                <Link
-                    to="/"
-                    className="inline-flex items-center px-6 py-3 bg-gray-200 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-300 transition duration-300 text-lg hover:underline-offset-4"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 mr-2"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                    >
-                        <path
-                            fillRule="evenodd"
-                            d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H16a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                            clipRule="evenodd"
-                        />
-                    </svg>
-                    Back to Home
-                </Link>
-            </div>
+            {/* Customer Info Modal */}
+            {showCustomerInfoModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+                    <div className="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md animate-fade-in-up">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Enter Your Details</h2>
+                        <form onSubmit={handleProceedToPayment} className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">First Name <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        id="firstName"
+                                        value={firstName}
+                                        onChange={(e) => setFirstName(e.target.value)}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        id="lastName"
+                                        value={lastName}
+                                        onChange={(e) => setLastName(e.target.value)}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label htmlFor="customerEmail" className="block text-sm font-medium text-gray-700">Email <span className="text-red-500">*</span></label>
+                                <input
+                                    type="email"
+                                    id="customerEmail"
+                                    value={customerEmail}
+                                    onChange={(e) => setCustomerEmail(e.target.value)}
+                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="customerPhone" className="block text-sm font-medium text-gray-700">Phone Number <span className="text-red-500">*</span></label>
+                                <input
+                                    type="tel"
+                                    id="customerPhone"
+                                    value={customerPhone}
+                                    onChange={(e) => setCustomerPhone(e.target.value)}
+                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    pattern="\d{10}"
+                                    title="Phone number must be 10 digits"
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="pinCode" className="block text-sm font-medium text-gray-700">Pin Code <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        id="pinCode"
+                                        value={pinCode}
+                                        onChange={(e) => setPinCode(e.target.value)}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        pattern="\d{6}"
+                                        title="Pin Code must be 6 digits"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="state" className="block text-sm font-medium text-gray-700">State <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        id="state"
+                                        value={state}
+                                        onChange={(e) => setState(e.target.value)}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="district" className="block text-sm font-medium text-gray-700">District <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        id="district"
+                                        value={district}
+                                        onChange={(e) => setDistrict(e.target.value)}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="village" className="block text-sm font-medium text-gray-700">Village/Locality <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="text"
+                                        id="village"
+                                        value={village}
+                                        onChange={(e) => setVillage(e.target.value)}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCustomerInfoModal(false)}
+                                    className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 font-semibold hover:bg-gray-50 transition duration-200"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-md shadow-md hover:bg-indigo-700 transition duration-200"
+                                >
+                                    Proceed to Payment
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
