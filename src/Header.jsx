@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { auth } from "./firebase";
+import { auth } from "./firebase"; // Assuming './firebase' is correctly configured for authentication
 
 import {
     FaUserCircle,
     FaAngleDown,
     FaInstagram,
+    FaShoppingCart // Imported for the cart icon
 } from "react-icons/fa";
 
 const Header = () => {
@@ -14,6 +15,11 @@ const Header = () => {
     const [user, setUser] = useState(null);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const profileRef = useRef(null);
+
+    // --- State for Cart Item Count ---
+    // IMPORTANT: You'll need to replace this placeholder with your actual cart logic
+    // For example, fetch from a global state (Context API, Redux) or a backend API
+    const [cartItemCount, setCartItemCount] = useState(0); // Placeholder: Initialize with 0
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -56,10 +62,11 @@ const Header = () => {
     const navLinks = [
         { to: "/", label: "Home" },
         { to: "/collections", label: "Collections" },
+        // Updated 'to' paths for better SEO and semantic URLs
         { to: "/mens-wear", label: "Earring Elegance" },
         { to: "/womens-wear", label: "Rings" },
         { to: "/accessories", label: "Accessories" },
-        { to: "/cart", label: "Cart" },
+        // Removed Cart link from here as we are using a dedicated icon
         { to: "/about", label: "About" },
     ];
 
@@ -96,6 +103,14 @@ const Header = () => {
             </nav>
 
             <div className="user-action-section">
+                {/* Cart Icon Link */}
+                <Link to="/cart" className="cart-icon-link" title="View Cart">
+                    <FaShoppingCart className="cart-icon" />
+                    {cartItemCount > 0 && ( // Display count only if greater than 0
+                        <span className="cart-item-count">{cartItemCount}</span>
+                    )}
+                </Link>
+
                 <div className="profile-dropdown-container" ref={profileRef}>
                     <button
                         onClick={toggleProfileMenu}
@@ -285,7 +300,7 @@ const Header = () => {
                         font-size: 11px; /* Smaller font for 3 tabs */
                         gap: 2px; /* Even less gap between icon/text */
                     }
-                     .nav-link-item span {
+                    .nav-link-item span {
                         text-align: center;
                         width: 100%;
                     }
@@ -371,6 +386,53 @@ const Header = () => {
                     justify-content: center;
                     white-space: nowrap;
                     position: relative;
+                }
+
+                /* Cart Icon Link */
+                .cart-icon-link {
+                    position: relative;
+                    display: flex; /* Flexbox for icon and count */
+                    align-items: center;
+                    text-decoration: none;
+                    color: var(--text-color-medium); /* Text color for the icon */
+                    font-size: 24px; /* Size of the cart icon */
+                    padding: 8px; /* Padding around the icon for clickability */
+                    border-radius: 50%; /* Make it circular */
+                    transition: all 0.2s ease;
+                    flex-shrink: 0; /* Prevent shrinking on small screens */
+                    margin-right: 15px; /* Spacing from profile button */
+                    background-color: transparent; /* Ensure transparent background */
+                }
+
+                .cart-icon-link:hover {
+                    color: var(--primary-color); /* Highlight on hover */
+                    transform: scale(1.1);
+                    background-color: var(--dropdown-item-hover); /* Subtle background change */
+                }
+
+                .cart-icon {
+                    font-size: inherit; /* Inherit size from parent .cart-icon-link */
+                    color: var(--text-color-light); /* Icon color */
+                }
+
+                .cart-item-count {
+                    position: absolute;
+                    top: 0px; /* Adjust as needed for vertical alignment */
+                    right: 0px; /* Adjust as needed for horizontal alignment */
+                    background-color: #ff3b3b; /* Red badge */
+                    color: white;
+                    font-size: 10px;
+                    font-weight: 700;
+                    padding: 2px 6px;
+                    border-radius: 50%;
+                    min-width: 20px; /* Ensure circular shape for single/double digits */
+                    height: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+                    transform: translate(50%, -50%); /* Adjust position to outside of icon */
+                    z-index: 1; /* Ensure it's above the icon */
                 }
 
                 .user-email-display {
@@ -517,9 +579,29 @@ const Header = () => {
                 }
 
                 .instagram-dropdown-link {
+                    /* Specific styles for Instagram link, if needed */
                 }
                 .instagram-dropdown-link:hover {
                     color: var(--primary-color);
+                }
+
+
+                /* --- Responsive Adjustments for Cart Icon --- */
+                @media (max-width: 600px) {
+                    .cart-icon-link {
+                        font-size: 22px; /* Slightly smaller on small mobiles */
+                        padding: 6px;
+                        margin-right: 10px; /* Less margin from profile button */
+                    }
+
+                    .cart-item-count {
+                        font-size: 9px;
+                        min-width: 18px;
+                        height: 18px;
+                        top: -2px;
+                        right: -2px;
+                        transform: translate(50%, -50%);
+                    }
                 }
 
 
@@ -588,13 +670,26 @@ const Header = () => {
                         margin-left: auto;
                         flex-shrink: 0;
                     }
+                    /* Cart Icon Link Desktop Adjustments */
+                    .cart-icon-link {
+                        font-size: 26px; /* Slightly larger on desktop */
+                        margin-right: 25px; /* More spacing on desktop */
+                    }
+
+                    .cart-item-count {
+                        font-size: 11px;
+                        min-width: 22px;
+                        height: 22px;
+                        top: 2px;
+                        right: 2px;
+                    }
+
                     .user-email-display {
-                        max-width: 15px;
+                        max-width: 150px; /* Increased max-width for desktop */
                     }
                     .auth-button {
-                        padding: 2px;
-                        border-radius: 25px;
-                        min-width: 4px;
+                        padding: 8px 15px; /* Reverted to more standard padding for desktop */
+                        min-width: auto; /* Allow button to size based on content */
                     }
                     .profile-icon {
                         font-size: 22px;
