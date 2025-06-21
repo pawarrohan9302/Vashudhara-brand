@@ -1,19 +1,18 @@
+// src/CategoryPage.jsx
 import React, { useEffect, useState } from "react";
-import { database } from "./firebase";
-import { ref, onValue, query, orderByChild, equalTo, push, update, set, remove, get } from "firebase/database";
-import { useNavigate } from "react-router-dom";
-import useAuthStatus from "./hooks/useAuthStatus";
-import loadScript from "./loadRazorpayScript";
+import { database } from "./firebase"; // Correct import path
+import { ref, onValue, query, orderByChild, equalTo, push, update, set, get, child } from "firebase/database";
+import { useNavigate } from "react-router-dom"; // Make sure react-router-dom is installed
+import useAuthStatus from "./hooks/useAuthStatus"; // Ensure this path is correct
+import loadScript from "./loadRazorpayScript"; // Ensure this path is correct
 
 // Define the mapping outside the component for better performance and readability
 const CATEGORY_HEADINGS = {
-    "mens-wear": "Earrings", // Adjusted based on common men's wear items
-    "womens-wear": "Rings", // As requested, if this is truly what you meant for the main women's heading
+    "mens-wear": "Earrings",
+    "womens-wear": "Rings",
     "accessories": "Bracelets",
-    "rings": "Rings" // Assuming 'Rings' is a sub-category or a specific category now
-    // Add more mappings as needed, e.g.:
-    // "watches": "Luxury Watches",
-    // "shoes": "Footwear Collection",
+    "rings": "Rings",
+    // Add more mappings as needed
 };
 
 const CategoryPage = ({ category }) => {
@@ -21,7 +20,7 @@ const CategoryPage = ({ category }) => {
     const navigate = useNavigate();
 
     const [products, setProducts] = useState([]);
-    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [selectedProduct, setSelectedProduct] = useState(null); // For buy/wishlist modal
     const [quantity, setQuantity] = useState(1);
     const [size, setSize] = useState("M");
 
@@ -46,6 +45,7 @@ const CategoryPage = ({ category }) => {
     useEffect(() => {
         setIsLoading(true);
         const productsRef = ref(database, "products");
+        // Ensure category in Firebase matches how you pass it (e.g., 'mens-wear' vs 'Mens Wear')
         const categoryQuery = query(productsRef, orderByChild("category"), equalTo(category));
 
         const unsubscribe = onValue(categoryQuery, (snapshot) => {
@@ -133,7 +133,14 @@ const CategoryPage = ({ category }) => {
         }
     };
 
+    // MODIFIED: Handle product card click to navigate to detail page
     const handleProductCardClick = (product) => {
+        navigate(`/product/${product.id}`); // Navigate to the product detail page
+    };
+
+    // If you still want a "Quick Buy" or "Add to Wishlist" action directly from the listing,
+    // you can add a button to the card and trigger this function.
+    const handleOpenQuickActionModal = (product) => {
         if (checkingStatus) {
             alert('Please wait while we check your login status.');
             return;
@@ -144,8 +151,9 @@ const CategoryPage = ({ category }) => {
             return;
         }
         setSelectedProduct(product);
-        setShowSelectionModal(true);
+        setShowSelectionModal(true); // This will open your selection modal first
     };
+
 
     const handleBuyNow = () => {
         setShowSelectionModal(false);
@@ -172,10 +180,15 @@ const CategoryPage = ({ category }) => {
             if (snapshot.exists()) {
                 alert(`${selectedProduct.title} is already in your wishlist!`);
             } else {
+                // Determine the image to save to wishlist (main image for consistency)
+                const imageUrlToSave = Array.isArray(selectedProduct.images) && selectedProduct.images.length > 0
+                    ? selectedProduct.images[0]
+                    : selectedProduct.image;
+
                 await set(wishlistProductRef, {
                     id: selectedProduct.id,
                     title: selectedProduct.title,
-                    image: selectedProduct.image,
+                    image: imageUrlToSave, // Use the determined image URL
                     price: selectedProduct.price,
                     category: selectedProduct.category,
                     brand: selectedProduct.brand || "N/A",
@@ -246,12 +259,17 @@ const CategoryPage = ({ category }) => {
             const newOrderRef = push(ordersRef);
             firebaseOrderId = newOrderRef.key;
 
+            // Determine the product image for the order
+            const orderProductImage = Array.isArray(selectedProduct.images) && selectedProduct.images.length > 0
+                ? selectedProduct.images[0]
+                : selectedProduct.image;
+
             await set(newOrderRef, {
                 id: firebaseOrderId,
                 userId: user.uid,
                 productId: selectedProduct.id,
                 productTitle: selectedProduct.title,
-                productImage: selectedProduct.image,
+                productImage: orderProductImage, // Use the determined image URL
                 pricePerItem: selectedProduct.price,
                 quantity: quantity,
                 size: size,
@@ -394,10 +412,12 @@ const CategoryPage = ({ category }) => {
     }
 
     if (!loggedIn) {
+        // You can choose whether users need to be logged in to see product listings.
+        // If not, remove this block or move it.
         return (
             <section className="bg-white min-h-screen py-16 px-5 font-poppins text-gray-800 flex justify-center items-center">
                 <div className="text-center p-8 bg-gray-100 rounded-lg shadow-xl">
-                    <p className="text-2xl font-bold text-red-600 mb-6">You must be logged in to purchase products or add to wishlist.</p>
+                    <p className="text-2xl font-bold text-red-600 mb-6">You must be logged in to view products.</p>
                     <button
                         onClick={() => navigate('/login')}
                         className="px-8 py-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors duration-300 transform hover:scale-105"
@@ -439,7 +459,7 @@ const CategoryPage = ({ category }) => {
                         <div
                             key={product.id}
                             className="relative bg-gray-100 rounded-3xl overflow-hidden shadow-lg shadow-emerald-300/30 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-emerald-300/60"
-                            onClick={() => handleProductCardClick(product)}
+                            onClick={() => handleProductCardClick(product)} // <--- Navigates to Product Detail Page
                         >
                             {product.tag && (
                                 <span className="absolute top-4 left-4 bg-green-500 text-white py-1.5 px-3 rounded-full text-xs font-bold uppercase tracking-wider z-10">
@@ -448,14 +468,23 @@ const CategoryPage = ({ category }) => {
                             )}
 
                             <img
-                                src={product.image}
+                                // FIX: Use product.images[0] if available, else product.image
+                                src={
+                                    Array.isArray(product.images) && product.images.length > 0
+                                        ? product.images[0]
+                                        : product.image // Fallback to singular 'image'
+                                }
                                 alt={product.title}
                                 className="w-full h-52 object-cover"
                                 loading="lazy"
                             />
 
-                            <div className="absolute bottom-0 w-full bg-emerald-600/85 text-emerald-50 text-center py-3 opacity-0 transition-opacity duration-300 font-semibold text-base rounded-b-3xl group-hover:opacity-100 hover-overlay">
-                                View Options
+                            {/* Optional: You can add a button here to open the quick action modal */}
+                            <div
+                                className="absolute bottom-0 w-full bg-emerald-600/85 text-emerald-50 text-center py-3 opacity-0 transition-opacity duration-300 font-semibold text-base rounded-b-3xl group-hover:opacity-100 hover-overlay"
+                                onClick={(e) => { e.stopPropagation(); handleOpenQuickActionModal(product); }} // Prevent card click from navigating
+                            >
+                                Quick View / Buy
                             </div>
 
                             <div className="p-6">
@@ -474,7 +503,8 @@ const CategoryPage = ({ category }) => {
                 )}
             </div>
 
-            {/* --- NEW: Product Selection Modal (Buy Now or Add to Wishlist) --- */}
+            {/* --- Product Selection Modal (Buy Now or Add to Wishlist) --- */}
+            {/* This modal is triggered by handleOpenQuickActionModal */}
             {showSelectionModal && selectedProduct && (
                 <div
                     className="fixed inset-0 bg-gray-800 bg-opacity-70 flex justify-center items-center z-50 p-5"
@@ -488,7 +518,12 @@ const CategoryPage = ({ category }) => {
                             {selectedProduct.title}
                         </h2>
                         <img
-                            src={selectedProduct.image}
+                            // FIX: Use selectedProduct.images[0] if available, else selectedProduct.image
+                            src={
+                                Array.isArray(selectedProduct.images) && selectedProduct.images.length > 0
+                                    ? selectedProduct.images[0]
+                                    : selectedProduct.image
+                            }
                             alt={selectedProduct.title}
                             className="w-40 h-40 object-contain rounded-lg mb-6"
                             loading="lazy"
@@ -547,7 +582,12 @@ const CategoryPage = ({ category }) => {
                             Buy {selectedProduct.title}
                         </h2>
                         <img
-                            src={selectedProduct.image}
+                            // FIX: Use selectedProduct.images[0] if available, else selectedProduct.image
+                            src={
+                                Array.isArray(selectedProduct.images) && selectedProduct.images.length > 0
+                                    ? selectedProduct.images[0]
+                                    : selectedProduct.image
+                            }
                             alt={selectedProduct.title}
                             className="w-full h-48 object-contain rounded-lg mb-6"
                             loading="lazy"
@@ -579,6 +619,7 @@ const CategoryPage = ({ category }) => {
                                     <option value="M">Medium</option>
                                     <option value="L">Large</option>
                                     <option value="XL">XL</option>
+                                    {/* Consider mapping dynamic sizes if they exist in product.sizes */}
                                     {selectedProduct.sizes && selectedProduct.sizes.map(s => (
                                         <option key={s} value={s}>{s}</option>
                                     ))}
@@ -670,8 +711,8 @@ const CategoryPage = ({ category }) => {
                                 />
                                 {pincodeError && !district && <p className="text-xs text-yellow-600 mt-1">Please fill District manually.</p>}
                             </div>
-                            <div>
-                                <label htmlFor="village" className="block text-sm font-semibold mb-1 text-gray-600">Village:</label>
+                            <div className="col-span-2">
+                                <label htmlFor="village" className="block text-sm font-semibold mb-1 text-gray-600">Village/Locality:</label>
                                 <input
                                     id="village"
                                     type="text"
@@ -683,15 +724,14 @@ const CategoryPage = ({ category }) => {
                             </div>
                         </div>
 
-                        <p className="text-2xl font-bold mb-6 text-emerald-800 text-center">
-                            Total: ₹{(selectedProduct.price * quantity).toFixed(2)}
+                        <p className="text-2xl font-bold mt-4 mb-6 text-emerald-800 text-center">
+                            Total: ₹{(parseFloat(selectedProduct.price) * quantity).toFixed(2)}
                         </p>
 
                         <button
                             onClick={handleCreateOrder}
+                            className={`w-full py-3 rounded-full text-lg font-semibold transition-colors duration-200 ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 text-white hover:bg-emerald-700"}`}
                             disabled={isSubmitting}
-                            className={`w-full py-3 rounded-full text-lg font-semibold transition-colors duration-200 ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                }`}
                         >
                             {isSubmitting ? "Processing Payment..." : "Proceed to Payment"}
                         </button>

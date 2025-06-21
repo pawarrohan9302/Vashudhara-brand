@@ -6,7 +6,7 @@ import ShopProfile from "./ShopProfile";
 import ProductManager from "./ProductManager";
 import OrdersList from "./OrdersList";
 import AdminRedeemCodes from "./AdminRedeemCodes";
-import AdminTrackOrders from "./AdminTrackOrders"; // 🔥 New import
+import AdminTrackOrders from "./AdminTrackOrders";
 
 const Admin = () => {
     const [passwordInput, setPasswordInput] = useState("");
@@ -23,7 +23,9 @@ const Admin = () => {
             if (data) {
                 const loadedProducts = Object.entries(data).map(([id, item]) => ({
                     id,
-                    ...item,
+                    // IMPORTANT: Ensure 'images' is an array, even if it might be missing or single-valued from old data
+                    images: Array.isArray(item.images) ? item.images : (item.image ? [item.image] : []),
+                    ...item, // Keep existing properties like title, price, brand, category
                 }));
                 setProducts(loadedProducts);
             } else {
@@ -160,18 +162,26 @@ const Admin = () => {
                 {activeTab === "shopProfile" && <ShopProfile />}
                 {activeTab === "productManager" && <ProductManager />}
                 {activeTab === "ordersList" && <OrdersList />}
-                {activeTab === "trackOrders" && <AdminTrackOrders />} {/* ✅ Track Orders tab */}
+                {activeTab === "trackOrders" && <AdminTrackOrders />}
                 {activeTab === "productsList" && (
                     <div>
                         <h2 className="text-2xl font-bold mb-4">Products List ({products.length})</h2>
                         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
                             {products.map((product) => (
                                 <div key={product.id} className="bg-white rounded-lg shadow-md p-4">
-                                    <img
-                                        src={product.image}
-                                        alt={product.title}
-                                        className="w-full h-48 object-cover rounded-md"
-                                    />
+                                    {/* ✅ MODIFICATION HERE: Check for images array and display the first one */}
+                                    {product.images && product.images.length > 0 ? (
+                                        <img
+                                            src={product.images[0]} // Access the first URL in the array
+                                            alt={product.title}
+                                            className="w-full h-48 object-cover rounded-md"
+                                        />
+                                    ) : (
+                                        // Optional: Display a placeholder if no image exists
+                                        <div className="w-full h-48 flex items-center justify-center bg-gray-200 text-gray-500 rounded-md">
+                                            No Image
+                                        </div>
+                                    )}
                                     <h3 className="text-xl font-semibold mt-2">{product.title}</h3>
                                     <p className="text-gray-600">₹ {product.price}</p>
                                     <p className="text-sm text-gray-500">{product.brand}</p>

@@ -1,46 +1,56 @@
 import React, { useEffect, useState } from "react";
-import { ref, onValue, set, get } from "firebase/database"; // Import 'set' and 'get'
-import { database, auth } from "./firebase"; // Assuming firebase.js also exports 'auth'
-import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
+import { ref, onValue, set, get } from "firebase/database";
+import { database, auth } from "./firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 const MensWear = () => {
     const [products, setProducts] = useState([]);
     const [checkoutProduct, setCheckoutProduct] = useState(null);
-    const [hoveredIndex, setHoveredIndex] = useState(null);
-    const [user, setUser] = useState(null); // State to store the logged-in user
-    const [userWishlist, setUserWishlist] = useState({}); // State to hold the user's wishlist
+    const [user, setUser] = useState(null);
+    const [userWishlist, setUserWishlist] = useState({});
+    const [currentImageIndex, setCurrentImageIndex] = useState({}); // State to manage the current image index for each product on hover
 
     // Effect to listen for authentication state changes
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
         });
-        // Cleanup the subscription on component unmount
         return () => unsubscribe();
     }, []);
 
     // Effect to fetch products for "mens-wear" category
     useEffect(() => {
         const productsRef = ref(database, "products");
-        // We can't directly query by child with `equalTo` here as `onValue` doesn't support
-        // advanced queries like `orderByChild` and `equalTo` directly for filtering
-        // outside of specific Realtime Database query methods.
-        // So, we fetch all products and filter client-side.
         const unsubscribe = onValue(productsRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
                 const mensProducts = Object.entries(data)
-                    .map(([id, item]) => ({ id, ...item }))
-                    .filter((item) => item.category === "mens-wear"); // Filters for mens-wear
+                    .map(([id, item]) => {
+                        let productImages = [];
+                        // Check if 'images' property exists and is an array
+                        if (Array.isArray(item.images)) {
+                            productImages = item.images;
+                        }
+                        // Fallback for old 'image' property (singular) if 'images' array is not found
+                        else if (item.image) {
+                            productImages = [item.image];
+                        }
+
+                        return {
+                            id,
+                            images: productImages, // Ensure this is always an array
+                            ...item, // Spread other properties (title, price, brand, category etc.)
+                        };
+                    })
+                    .filter((item) => item.category === "mens-wear");
                 setProducts(mensProducts);
             } else {
                 setProducts([]);
             }
         }, (error) => {
             console.error("Error fetching products:", error);
-            // Optionally, handle error state for UI
+            // Optionally, set an error state to display to the user
         });
-        // Cleanup the subscription on component unmount
         return () => unsubscribe();
     }, []);
 
@@ -54,18 +64,14 @@ const MensWear = () => {
             }, (error) => {
                 console.error("Error fetching user wishlist:", error);
             });
-            // Cleanup the subscription on component unmount
             return () => unsubscribeWishlist();
         } else {
-            // Clear wishlist if user logs out
             setUserWishlist({});
         }
-    }, [user]); // Re-run when user changes
+    }, [user]);
 
     // Function to handle "Buy Now" click
     const handleBuyClick = (product) => {
-        // In a real app, this would typically navigate to a product detail page or a checkout flow
-        // For simplicity, here it just opens a confirmation modal
         if (!user) {
             alert("Please log in to purchase products.");
             return;
@@ -80,42 +86,27 @@ const MensWear = () => {
             return;
         }
 
-        // IMPORTANT: Ensure your Firebase Realtime Database rules allow this write:
-        // {
-        //   "rules": {
-        //     "wishlists": {
-        //       "$uid": {
-        //         ".read": "auth != null && auth.uid === $uid",
-        //         ".write": "auth != null && auth.uid === $uid"
-        //       }
-        //     }
-        //   }
-        // }
         const wishlistProductRef = ref(database, `wishlists/${user.uid}/${product.id}`);
 
         try {
-            // Use get() for a one-time read to check if the product already exists in wishlist
             const snapshot = await get(wishlistProductRef);
             if (snapshot.exists()) {
                 alert(`${product.title} is already in your wishlist!`);
             } else {
-                // If not in wishlist, add it
                 await set(wishlistProductRef, {
                     id: product.id,
                     title: product.title,
-                    image: product.image,
+                    images: product.images, // Store the array of images
                     price: product.price,
                     category: product.category,
                     brand: product.brand || "N/A",
-                    addedDate: new Date().toISOString(), // Add a timestamp for when it was added
+                    addedDate: new Date().toISOString(),
                 });
                 alert(`${product.title} added to your wishlist!`);
             }
         } catch (error) {
-            // --- ENHANCED ERROR LOGGING STARTS HERE ---
             console.error("Error adding to wishlist:", error.code, error.message, error);
             alert(`Failed to add product to wishlist. Please try again. Error: ${error.message || 'Unknown error'}`);
-            // --- ENHANCED ERROR LOGGING ENDS HERE ---
         }
     };
 
@@ -124,6 +115,54 @@ const MensWear = () => {
         return userWishlist && userWishlist[productId] !== undefined;
     };
 
+    // New handlers for image hover to implement slider
+    const handleProductMouseEnter = (productId) => {
+        const product = products.find(p => p.id === productId);
+        if (product && product.images && product.images.length > 1) {
+            let index = 0;
+            // Set initial image to 0
+            setCurrentImageIndex(prev => ({
+                ...prev,
+                [productId]: 0
+            }));
+            // Start an interval to cycle through images
+            const intervalId = setInterval(() => {
+                setCurrentImageIndex(prev => {
+                    const nextIndex = (prev[productId] + 1) % product.images.length;
+                    return {
+                        ...prev,
+                        [productId]: nextIndex
+                    };
+                });
+            }, 1000); // Change image every 1 second (adjust as needed)
+            // Store the interval ID to clear it later
+            setCurrentImageIndex(prev => ({
+                ...prev,
+                [`interval-${productId}`]: intervalId
+            }));
+        } else {
+            // If only one image or no images, ensure index is 0
+            setCurrentImageIndex(prev => ({
+                ...prev,
+                [productId]: 0
+            }));
+        }
+    };
+
+    const handleProductMouseLeave = (productId) => {
+        // Clear the interval when mouse leaves
+        const intervalId = currentImageIndex[`interval-${productId}`];
+        if (intervalId) {
+            clearInterval(intervalId);
+        }
+        // Reset to first image or clear the entry
+        setCurrentImageIndex(prev => {
+            const newState = { ...prev };
+            delete newState[productId]; // Remove the specific product's image index
+            delete newState[`interval-${productId}`]; // Remove the interval ID
+            return newState;
+        });
+    };
 
     return (
         <section
@@ -144,7 +183,7 @@ const MensWear = () => {
                         color: "#a7f3d0",
                     }}
                 >
-                    Men's Wear {/* Title for MensWear */}
+                    Men's Wear
                 </h1>
                 <p style={{ fontSize: "18px", color: "#94a3b8", marginBottom: "50px" }}>
                     Explore our exclusive collection of men's fashion.
@@ -166,23 +205,20 @@ const MensWear = () => {
                         No men's wear products found.
                     </p>
                 ) : (
-                    products.map((product, idx) => (
+                    products.map((product) => (
                         <div
                             key={product.id}
-                            onMouseEnter={() => setHoveredIndex(idx)}
-                            onMouseLeave={() => setHoveredIndex(null)}
+                            onMouseEnter={() => handleProductMouseEnter(product.id)}
+                            onMouseLeave={() => handleProductMouseLeave(product.id)}
                             style={{
                                 position: "relative",
                                 backgroundColor: "#1f2937",
                                 borderRadius: "20px",
                                 overflow: "hidden",
-                                boxShadow:
-                                    hoveredIndex === idx
-                                        ? "0 15px 40px rgba(52, 211, 153, 0.6)"
-                                        : "0 10px 30px rgba(52, 211, 153, 0.3)",
+                                boxShadow: "0 10px 30px rgba(52, 211, 153, 0.3)", // Base shadow
                                 cursor: "pointer",
                                 transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                                transform: hoveredIndex === idx ? "scale(1.05)" : "scale(1)",
+                                transform: currentImageIndex[`interval-${product.id}`] ? "scale(1.05)" : "scale(1)", // Scale if actively sliding
                                 color: "#e0e7ff",
                                 display: "flex",
                                 flexDirection: "column",
@@ -190,12 +226,56 @@ const MensWear = () => {
                                 height: "100%",
                             }}
                         >
-                            <img
-                                src={product.image}
-                                alt={product.title}
-                                style={{ width: "100%", height: "200px", objectFit: "cover" }}
-                                loading="lazy"
-                            />
+                            {/* Image Container for Slider */}
+                            <div style={{ position: 'relative', width: '100%', height: '200px', overflow: 'hidden' }}>
+                                {/* Display image only if product.images is an array and has elements */}
+                                {product.images && product.images.length > 0 ? (
+                                    <img
+                                        // Display the image based on currentImageIndex state for this product
+                                        // currentImageIndex[product.id] will be undefined initially, so || 0 ensures first image
+                                        src={product.images[currentImageIndex[product.id] || 0]}
+                                        alt={product.title}
+                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                        loading="lazy"
+                                    />
+                                ) : (
+                                    // Placeholder if no images
+                                    <div style={{ width: "100%", height: "100%", backgroundColor: "#334155", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8" }}>
+                                        No Image
+                                    </div>
+                                )}
+
+                                {/* Image Navigation Dots */}
+                                {product.images && product.images.length > 1 && ( // Only show dots if more than one image
+                                    <div
+                                        style={{
+                                            position: "absolute",
+                                            bottom: "10px",
+                                            left: "50%",
+                                            transform: "translateX(-50%)",
+                                            display: "flex",
+                                            gap: "5px",
+                                            zIndex: 10,
+                                        }}
+                                    >
+                                        {product.images.map((_, dotIndex) => (
+                                            <span
+                                                key={dotIndex}
+                                                style={{
+                                                    width: "8px",
+                                                    height: "8px",
+                                                    borderRadius: "50%",
+                                                    backgroundColor:
+                                                        currentImageIndex[product.id] === dotIndex
+                                                            ? "#34d399" // Active dot color
+                                                            : "rgba(255, 255, 255, 0.5)", // Inactive dot color
+                                                    transition: "background-color 0.3s ease",
+                                                }}
+                                            ></span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
 
                             <div style={{ padding: "20px" }}>
                                 <h2
@@ -215,7 +295,6 @@ const MensWear = () => {
                                     ₹{product.price}
                                 </p>
 
-                                {/* Buy Now Button */}
                                 <button
                                     onClick={() => handleBuyClick(product)}
                                     style={{
@@ -238,14 +317,12 @@ const MensWear = () => {
                                     Buy Now
                                 </button>
 
-                                {/* Add to Wishlist Button */}
                                 <button
                                     onClick={() => handleAddToWishlist(product)}
-                                    // Disable button if product is already in wishlist
                                     disabled={isProductInWishlist(product.id)}
                                     style={{
                                         marginTop: "10px",
-                                        backgroundColor: isProductInWishlist(product.id) ? "#4b5563" : "#f97316", // Gray if in wishlist, orange otherwise
+                                        backgroundColor: isProductInWishlist(product.id) ? "#4b5563" : "#f97316",
                                         color: "white",
                                         padding: "12px 0",
                                         border: "none",
