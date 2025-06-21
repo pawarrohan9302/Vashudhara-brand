@@ -3,7 +3,7 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 // Auth context using Firebase
-import { AuthProvider } from "./AuthContext.jsx";
+import { AuthProvider } from "./AuthContext.jsx"; // This is where isAdmin is now determined
 
 // Your components
 import Header from "./Header.jsx";
@@ -13,17 +13,17 @@ import About from "./About.jsx";
 import Contact from "./Contact.jsx";
 import Collections from "./Collections.jsx";
 import CategoryPage from "./CategoryPage.jsx";
-import Admin from "./Admin.jsx";
+import Admin from "./Admin.jsx"; // The Admin dashboard component
 import Login from "./Login.jsx";
 import Register from "./Register.jsx";
 import ForgotPassword from "./ForgotPassword.jsx";
 import Wishlist from "./Wishlist.jsx";
 import GiftCard from "./GiftCard.jsx";
 
-// NEW: Product Detail Component
-import ProductDetail from "./ProductDetail.jsx"; // Import the new ProductDetail component
+// Product Detail Component
+import ProductDetail from "./ProductDetail.jsx";
 
-// Protected Components
+// Protected Components (for regular users)
 import Dashboard from "./Dashboard.jsx";
 import ProfileForm from "./ProfileForm.jsx";
 import Payment from "./Payment.jsx";
@@ -31,41 +31,50 @@ import Orders from "./Orders.jsx";
 import Profile from "./Profile.jsx";
 import Coupons from "./Coupons.jsx";
 import SavedCards from "./SavedCards.jsx";
-import SavedUPI from "./SavedUPI.jsx"; // Keeping this import as "Saved VPA" might refer to this
+import SavedUPI from "./SavedUPI.jsx";
 import Wallets from "./Wallets.jsx";
 import Addresses from "./Addresses.jsx";
 import Overview from "./Overview.jsx";
 import CustomerOrderView from "./CustomerOrderView.jsx";
 
-// Your PrivateRoute
-import PrivateRoute from "./PrivateRoute.jsx";
+// Your custom route wrappers
+import PrivateRoute from "./PrivateRoute.jsx"; // For regular user protected routes
+import AdminRoute from "./AdminRoute.jsx";   // 🔥 NEW: For admin-specific protected routes
 
 const App = () => (
   <Router>
-    <AuthProvider>
+    <AuthProvider> {/* AuthProvider makes user and isAdmin status available everywhere */}
       <Header />
       <Routes>
         {/* --- Public Routes --- */}
+        {/* These routes are accessible to anyone */}
         <Route path="/" element={<Home />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/collections" element={<Collections />} />
 
-        {/* Product Detail Route: This is where individual product details will be displayed */}
+        {/* Dynamic route for individual product details */}
         <Route path="/product/:id" element={<ProductDetail />} />
 
+        {/* Category specific pages */}
         <Route path="/mens-wear" element={<CategoryPage category="mens-wear" />} />
         <Route path="/womens-wear" element={<CategoryPage category="womens-wear" />} />
         <Route path="/accessories" element={<CategoryPage category="accessories" />} />
 
+        {/* Authentication related pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        <Route path="/admin" element={<Admin />} />
+        {/* --- Admin Protected Route --- */}
+        {/* Only users with the 'isAdmin: true' custom claim can access the /admin path */}
+        <Route element={<AdminRoute />}>
+          <Route path="/admin" element={<Admin />} />
+        </Route>
 
-        {/* --- Protected Routes --- */}
+        {/* --- Regular User Protected Routes --- */}
+        {/* These routes require a user to be logged in (but not necessarily an admin) */}
         <Route element={<PrivateRoute />}>
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/gift-cards" element={<GiftCard />} />
@@ -86,6 +95,7 @@ const App = () => (
         </Route>
 
         {/* Catch-all 404 Route */}
+        {/* Renders if no other route matches the URL */}
         <Route
           path="*"
           element={

@@ -12,24 +12,40 @@ export function useAuth() {
 export function AuthProvider({ children }) {
     const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(true); // Initial loading state is true
+    const [isAdmin, setIsAdmin] = useState(false); // 🔥 NEW: State to store admin status
 
     useEffect(() => {
         // This Firebase function listens for authentication state changes
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setCurrentUser(user); // Set currentUser to user object or null
-            setLoading(false);    // Once Firebase has checked, set loading to false
+        const unsubscribe = onAuthStateChanged(auth, async (user) => { // Make it async to use await
+            setCurrentUser(user);
+
+            if (user) {
+                try {
+                    // 🔥 NEW: Get the user's ID token result.
+                    // Pass 'true' to force a refresh, ensuring we get the latest custom claims.
+                    const idTokenResult = await user.getIdTokenResult(true);
+                    // Check if the 'isAdmin' custom claim exists and is true
+                    setIsAdmin(idTokenResult.claims.isAdmin === true);
+                } catch (error) {
+                    console.error("Error fetching user ID token or claims:", error);
+                    setIsAdmin(false); // If there's an error, assume not admin
+                }
+            } else {
+                // If no user is logged in, they cannot be an admin
+                setIsAdmin(false);
+            }
+            setLoading(false); // Authentication state (and admin status) has been determined
         });
 
         // Cleanup subscription on component unmount
         return unsubscribe;
     }, []); // Empty dependency array means this runs once on mount
 
-    // Provide currentUser and loading state to components
+    // Provide currentUser, loading, AND isAdmin status to components
     const value = {
         currentUser,
         loading,
-        // You might want to add login/logout functions here later,
-        // which would wrap Firebase auth methods (e.g., signInWithEmailAndPassword)
+        isAdmin, // 🔥 NEW: Expose the isAdmin status
     };
 
     return (
